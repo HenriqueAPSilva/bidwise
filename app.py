@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 import exportador
+from exportador import draw_uncertainty_chart
 from motor import (
     Comportamento,
     Fornecedor,
@@ -127,45 +128,46 @@ MECH_LABEL_EN: dict[str, str] = {
 # HELPERS
 # ──────────────────────────────────────────────────────────────────────
 
-def _confidence_label(score: float) -> str:
-    if score >= 0.30:
-        return "Clear recommendation"
-    elif score >= 0.10:
-        return "Moderate confidence"
-    return "Formats are close — review alternatives"
-
-
 def _fmt_brl(value: float | None) -> str:
     if value is None:
         return "—"
-    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"$ {value:,.2f}"
 
 
 def _build_copy_prompt(inp: InputLeilao, rec, sim) -> str:
     """Generate a structured prompt the user can paste into any AI assistant."""
+    _KRALJIC_EN = {
+        "Alavanca": "Leverage", "Estratégico": "Strategic",
+        "Gargalo": "Bottleneck", "Não crítico": "Non-critical",
+    }
+    _NIVEL_EN = {"Alto": "High", "Médio": "Medium", "Baixo": "Low"}
+    _BEHAV_EN = {
+        "Competitivo": "Competitive", "Moderado": "Moderate", "Conservador": "Conservative",
+    }
+
     lines = [
         "# BidWise Auction Analysis — Take to Your Preferred AI",
         "",
         "## Scenario Inputs",
         f"- Number of suppliers: {inp.num_fornecedores}",
-        f"- Kraljic quadrant: {inp.kraljic.value}",
-        f"- Item commoditization: {inp.comoditizacao.value}",
+        f"- Kraljic quadrant: {_KRALJIC_EN.get(inp.kraljic.value, inp.kraljic.value)}",
+        f"- Item commoditization: {_NIVEL_EN.get(inp.comoditizacao.value, inp.comoditizacao.value)}",
         f"- Price spread (auto-calculated): {inp.dispersao_precos:.1f}%",
         "",
         "## Supplier Profiles (anonymized)",
     ]
     for i, forn in enumerate(inp.fornecedores):
-        # Use generic labels — no real names or proposal values in shared prompt
+        _prop_str = f"${forn.proposta_brl:,.0f}" if forn.proposta_brl else "not provided"
         lines.append(
             f"- Supplier {i + 1}: "
-            f"strategic interest={forn.interesse_estrategico.value}"
-            f", behavior={forn.comportamento.value}"
+            f"proposal={_prop_str}"
+            f", strategic interest={_NIVEL_EN.get(forn.interesse_estrategico.value, forn.interesse_estrategico.value)}"
+            f", behavior={_BEHAV_EN.get(forn.comportamento.value, forn.comportamento.value)}"
         )
     lines += [
         "",
         "## BidWise Recommendation",
         f"- Recommended format: {FORMAT_LABEL_EN[rec.formato]}",
-        f"- Confidence score: {rec.score_confianca:.0%}",
         f"- Justification: {rec.justificativa}",
     ]
     if rec.parametros:
@@ -174,7 +176,7 @@ def _build_copy_prompt(inp: InputLeilao, rec, sim) -> str:
             "",
             "## Optimized Parameters",
             f"- Minimum decrement: {p.decremento_min_pct:.2f}%"
-            + (f" (R$ {p.decremento_min_brl:,.0f})" if p.decremento_min_brl else ""),
+            + (f" ($ {p.decremento_min_brl:,.0f})" if p.decremento_min_brl else ""),
             f"- Opening price: {p.preco_abertura_pct:+.1f}% vs. best proposal",
             f"- Auction duration: {p.duracao_minutos} min",
         ]
@@ -240,69 +242,8 @@ tab_main, tab_about = st.tabs(["Auction Advisor", "About BidWise"])
 # ══════════════════════════════════════════════════════════════════════
 
 with tab_about:
-    st.markdown("""
-### About BidWise
-
-**Why I built this**
-
-I'm Henrique Silva, a procurement professional with 7+ years in strategic sourcing.
-I've run extensive reverse auctions at Vale S.A. (using Nimbi and Coupa) and currently manage
-a R$1.2B refractory portfolio at ArcelorMittal Brasil.
-
-Every reverse auction starts with the same question: which format should I use and how
-should I configure it? There's no tool for that — it's pure experience and intuition.
-BidWise codifies that decision into a transparent, auditable engine based on auction theory.
-
----
-
-**How it works**
-
-BidWise's recommendation engine is 100% deterministic — no AI, no black box.
-Every recommendation is based on explicit scoring rules derived from auction theory
-(Krishna, Dixit & Nalebuff, Malhotra & Bazerman) and real-world experience with
-Coupa platform formats.
-
-The engine scores each auction format against your scenario and recommends the one that
-maximizes expected saving. All parameters (decrement, opening price, duration, extension)
-are calculated using formulas you can inspect in the source code.
-
----
-
-**Your data, your control**
-
-- No cookies. No tracking. No accounts.
-- No data is stored — your scenarios exist only in your active browser session.
-- No data is transmitted to external servers.
-- The "Copy prompt" feature generates text locally — nothing is sent unless **you** paste it somewhere.
-- Analytics by [Plausible](https://plausible.io) (privacy-first, cookie-free, no personal data).
-
-**How to verify:** Open your browser's Developer Tools (F12), go to the Network tab,
-and run an analysis. You'll see only static asset requests to Streamlit Cloud and Plausible —
-no API calls with your data.
-
----
-
-**Open source**
-
-BidWise is fully open source. Every line of code is available at
-[github.com/HenriqueAPSilva/bidwise](https://github.com/HenriqueAPSilva/bidwise).
-
-Want to build something similar? Start with a real problem in your domain, codify your
-expertise into explicit rules, and use AI as an amplifier — not a substitute.
-The most valuable part of this project isn't the code. It's the years of
-sourcing experience behind the scoring logic.
-
----
-
-**Built with**
-
-Python · Streamlit · ReportLab · Auction Theory
-
-**Contact**
-
-[LinkedIn](https://www.linkedin.com/in/henrique-alexandre-pinto-silva/) ·
-[GitHub](https://github.com/HenriqueAPSilva)
-""")
+    with open("about.md", encoding="utf-8") as _f:
+        st.markdown(_f.read())
 
 # ══════════════════════════════════════════════════════════════════════
 # MAIN TAB — AUCTION ADVISOR
@@ -317,7 +258,7 @@ with tab_main:
     st.markdown(
         """
         <div style="padding-bottom: 4px;">
-            <span style="font-size:2.4rem; font-weight:800; color:#0D2137;">🔨 BidWise</span>
+            <span style="font-size:2.4rem; font-weight:800; color:#F0E68C;">🔨 BidWise</span>
             &nbsp;
             <span style="font-size:1.1rem; color:#374151; font-weight:500;">
                 Reverse Auction Strategy Advisor
@@ -387,7 +328,7 @@ with tab_main:
                     key=f"sup_name_{_i}",
                 )
                 _prop = st.number_input(
-                    "Proposal value (R$)",
+                    "Proposal value ($)",
                     min_value=0.0,
                     value=0.0,
                     step=1_000.0,
@@ -479,12 +420,6 @@ with tab_main:
             comoditizacao=_COMOD_ENUM[_extract_key(comod_label)],
         )
 
-        if inp.dispersao_precos > 50:
-            st.warning(
-                "⚠️ Price spread exceeds 50%. This may indicate inconsistent specifications "
-                "or an outlier proposal. Consider reviewing equalization round data."
-            )
-
         rec = recomendar(inp)
         sim = simular(inp, rec)
 
@@ -502,6 +437,11 @@ with tab_main:
     inp = st.session_state.last_inp
     rec = st.session_state.last_rec
     sim = st.session_state.last_sim
+
+    if inp.dispersao_precos > 50:
+        st.warning(
+            "⚠️ Price spread exceeds 50%. Consider reviewing equalization data for outliers."
+        )
 
     # ──────────────────────────────────────────────────────────────────
     # 1. RECOMMENDATION CARD
@@ -543,11 +483,13 @@ with tab_main:
     _eff_abertura_pct: float | None = rec.parametros.preco_abertura_pct if rec.parametros else None
     _eff_abertura_brl: float | None = rec.parametros.preco_abertura_brl if rec.parametros else None
 
-    if rec.parametros and fmt != FormatoLeilao.NAO_LEILAO:
+    _is_english = fmt in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO)
+
+    if rec.parametros and fmt != FormatoLeilao.NAO_LEILAO and not _is_english:
         _bidwise_pct = rec.parametros.preco_abertura_pct
         _op_options = [
-            f"Use BidWise suggestion ({_bidwise_pct:+.1f}% vs. best equalization price)",
-            "Use best equalization price as ceiling (0% adjustment)",
+            f"Use BidWise suggestion ({_bidwise_pct:+.1f}% vs. best proposal)",
+            "Use best proposal as ceiling (0% adjustment)",
             "Custom adjustment",
         ]
         _op_strategy = st.radio(
@@ -557,7 +499,6 @@ with tab_main:
             horizontal=True,
             help=(
                 "BidWise suggestion uses format-specific formulas. "
-                "Equalization starts at the average of all received proposals. "
                 "Custom lets you set any adjustment vs. the best proposal."
             ),
         )
@@ -598,12 +539,17 @@ with tab_main:
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            brl_str = f"R$ {p.decremento_min_brl:,.0f}" if p.decremento_min_brl else None
+            brl_str = f"$ {p.decremento_min_brl:,.0f}" if p.decremento_min_brl else None
             st.metric("Min. Decrement", f"{p.decremento_min_pct:.2f}%", delta=brl_str)
         with c2:
-            ap_brl_str = f"R$ {_eff_abertura_brl:,.0f}" if _eff_abertura_brl else None
-            ap_pct_str = f"{_eff_abertura_pct:+.1f}% vs. equalization" if _eff_abertura_pct is not None else "—"
-            st.metric("Opening Price", ap_pct_str, delta=ap_brl_str)
+            ap_brl_str = f"$ {_eff_abertura_brl:,.0f}" if _eff_abertura_brl else None
+            if _is_english:
+                ap_pct_str = "Best Response"
+            elif _eff_abertura_pct is not None:
+                ap_pct_str = f"{_eff_abertura_pct:+.1f}%"
+            else:
+                ap_pct_str = "—"
+            st.metric("Opening", ap_pct_str, delta=ap_brl_str)
         with c3:
             ext_str = f"+{p.prorrogacao_minutos} min auto-ext." if p.prorrogacao_minutos else None
             st.metric("Duration", f"{p.duracao_minutos} min", delta=ext_str)
@@ -614,19 +560,23 @@ with tab_main:
                     delta=f"{p.intervalo_rodada_minutos} min / round" if p.intervalo_rodada_minutos else None,
                 )
             elif p.incremento_holandes_pct:
-                inc_brl = f"R$ {p.incremento_holandes_brl:,.0f}/tick" if p.incremento_holandes_brl else None
+                inc_brl = f"$ {p.incremento_holandes_brl:,.0f}/tick" if p.incremento_holandes_brl else None
                 st.metric("Dutch Increment", f"{p.incremento_holandes_pct:.2f}%/tick", delta=inc_brl)
             elif p.visibilidade:
                 enabled = "Enabled" if "Enabled" in p.visibilidade else "Disabled"
                 st.metric("Thermometer", enabled)
 
+        _opening_label = "Opening price"
+        if _is_english:
+            _opening_val = "Best Response"
+            _opening_brl = "Suppliers enter with equalized prices"
+        else:
+            _opening_val = f"{_eff_abertura_pct:+.1f}%" if _eff_abertura_pct is not None else "—"
+            _opening_brl = _fmt_brl(_eff_abertura_brl)
+
         rows = [
             ("Minimum decrement", f"{p.decremento_min_pct:.2f}%", _fmt_brl(p.decremento_min_brl)),
-            (
-                "Opening price (vs. best proposal)",
-                f"{_eff_abertura_pct:+.1f}%" if _eff_abertura_pct is not None else "—",
-                _fmt_brl(_eff_abertura_brl),
-            ),
+            (_opening_label, _opening_val, _opening_brl),
             ("Auction duration", f"{p.duracao_minutos} min", "—"),
         ]
         if p.prorrogacao_minutos:
@@ -649,7 +599,7 @@ with tab_main:
             ))
 
         st.dataframe(
-            pd.DataFrame(rows, columns=["Parameter", "Value (%)", "Value (R$)"]),
+            pd.DataFrame(rows, columns=["Parameter", "Value (%)", "Value ($)"]),
             use_container_width=True,
             hide_index=True,
         )
@@ -703,54 +653,21 @@ with tab_main:
                     delta_color="inverse",
                 )
 
-        # ── Bar chart ────────────────────────────────────────────────
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots(figsize=(5, 3))
-        fig.patch.set_alpha(0)
-        ax.set_facecolor("none")
-
-        labels = ["Pessimistic", "Realistic", "Optimistic"]
-        values = [s.pessimista_pct, s.realista_pct, s.otimista_pct]
-        colors = ["#e74c3c", "#f39c12", "#2ecc71"]
-
-        bars = ax.bar(labels, values, color=colors, width=0.45, zorder=3)
-        for bar, val in zip(bars, values):
-            ax.text(
-                bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + 0.15,
-                f"{val:.1f}%",
-                ha="center", va="bottom", fontsize=10, fontweight="bold",
-                color="#374151",
+        # ── Uncertainty chart ─────────────────────────────────────────
+        _fig, _has_chart = draw_uncertainty_chart(sim.alvos_por_fornecedor)
+        if _has_chart:
+            import matplotlib.pyplot as plt
+            st.pyplot(_fig, use_container_width=True)
+            plt.close(_fig)
+        else:
+            st.caption(
+                "Enter supplier proposal values to see the uncertainty projection chart."
             )
 
-        ax.axhline(
-            y=inp.dispersao_precos,
-            color="#6B7280", linestyle="--", linewidth=1.2, zorder=2,
-            label=f"Price spread ({inp.dispersao_precos:.1f}%)",
-        )
-        ax.set_ylabel("Saving (%)", fontsize=9, color="#374151")
-        ax.set_ylim(0, max(inp.dispersao_precos, s.otimista_pct) * 1.25 + 1)
-        ax.tick_params(colors="#374151", labelsize=9)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines["left"].set_color("#E5E7EB")
-        ax.spines["bottom"].set_color("#E5E7EB")
-        ax.yaxis.grid(True, color="#F3F4F6", zorder=0)
-        ax.legend(fontsize=8, framealpha=0, labelcolor="#6B7280")
-        plt.tight_layout()
-
-        _chart_col, _btn_col = st.columns([3, 1])
-        with _chart_col:
-            st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
-
-        # Inline PDF button
+        # PDF button below chart
         pdf_bytes = exportador.gerar_pdf(inp, rec, sim)
-        with _btn_col:
-            st.write("")  # vertical spacer
+        _pdf_col, _ = st.columns([1, 3])
+        with _pdf_col:
             st.download_button(
                 label="📄 Download PDF",
                 data=pdf_bytes,
@@ -775,12 +692,42 @@ with tab_main:
     st.subheader("Supplier Behavior Simulation")
 
     if fmt != FormatoLeilao.NAO_LEILAO and sim.fornecedores:
+        # ── Archetype cards (stacked, one per archetype present) ──────
+        _ARQ_DESC = {
+            "Aggressive Leader":  "Bids early and aggressively to discourage competitors",
+            "Cautious Follower":  "Watches ranking, activates in the final sprint",
+            "Floor-setter":       "Marks initial position without revealing true price floor",
+            "Dropout Candidate":  "Conservative or low interest — likely to withdraw early",
+        }
+        _ARQ_ORDER = ["Aggressive Leader", "Cautious Follower", "Floor-setter", "Dropout Candidate"]
+        _arq_grupos: dict[str, list[str]] = {}
+        for _fs in sim.fornecedores:
+            _arq_key = _fs.arquetipo.value
+            _arq_grupos.setdefault(_arq_key, []).append(_fs.nome_original or f"Supplier {_fs.id}")
+        _present = [(n, _arq_grupos[n]) for n in _ARQ_ORDER if n in _arq_grupos]
+        if _present:
+            _arq_cols = st.columns(len(_present))
+            for _col, (_arq_name, _nomes) in zip(_arq_cols, _present):
+                with _col:
+                    _sup_lines = "<br>".join(_nomes)
+                    _desc = _ARQ_DESC.get(_arq_name, "")
+                    st.markdown(
+                        f"<div style='text-align:center;'>"
+                        f"<span style='font-size:48px;font-weight:bold;line-height:1.1;'>{len(_nomes)}</span><br>"
+                        f"<b>{_arq_name}</b><br>"
+                        f"{_sup_lines}<br>"
+                        f"<i style='color:gray;font-size:13px;'>{_desc}</i>"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+        st.write("")
+
         st.markdown(sim.narrativa)
 
         if sim.vencedor_provavel and sim.preco_final_estimado_pct is not None:
             _saving_pct = abs(sim.preco_final_estimado_pct)
             _close_str = (
-                f" (R$ {_fmt_brl(round(inp.melhor_proposta_brl * (1 - _saving_pct / 100), 2))}, "
+                f" ({_fmt_brl(round(inp.melhor_proposta_brl * (1 - _saving_pct / 100), 2))}, "
                 f"−{_saving_pct:.1f}% vs. best equalization price)"
                 if inp.melhor_proposta_brl else
                 f" (−{_saving_pct:.1f}% vs. best equalization price)"
@@ -831,17 +778,14 @@ with tab_main:
 
     if len(st.session_state.scenarios) == 0:
         st.caption("Save your current scenario to compare configurations side by side.")
-    elif len(st.session_state.scenarios) == 1:
-        st.caption("Save at least one more scenario to compare side by side.")
-        if st.button("🗑️ Clear all scenarios", type="secondary"):
-            st.session_state.scenarios = []
-            st.rerun()
     else:
         if st.button("🗑️ Clear all scenarios", type="secondary"):
             st.session_state.scenarios = []
             st.rerun()
-        cols = st.columns(len(st.session_state.scenarios))
-        for col, scenario in zip(cols, st.session_state.scenarios):
+
+        n_saved = len(st.session_state.scenarios)
+        cols = st.columns(max(n_saved, 2))
+        for col, scenario in zip(cols[:n_saved], st.session_state.scenarios):
             with col:
                 r = scenario["rec"]
                 s_sim = scenario["sim"]
@@ -872,6 +816,9 @@ with tab_main:
                         f"vs. best equalization"
                     )
 
+        if n_saved == 1:
+            st.info("Save another scenario to compare side by side.", icon="💡")
+
     # ──────────────────────────────────────────────────────────────────
     # 6. TAKE TO AI
     # ──────────────────────────────────────────────────────────────────
@@ -893,18 +840,14 @@ with tab_main:
         if rec.referencias:
             rows_ref = [
                 {
-                    "Book":                     r.livro,
-                    "Author":                   r.autor,
-                    "Concept":                  r.conceito,
-                    "Applied to this scenario": r.aplicacao,
+                    "Book":        r.livro,
+                    "Author":      r.autor,
+                    "Concept":     r.conceito,
+                    "Application": r.aplicacao,
                 }
                 for r in rec.referencias
             ]
-            st.dataframe(
-                pd.DataFrame(rows_ref),
-                use_container_width=True,
-                hide_index=True,
-            )
+            st.table(pd.DataFrame(rows_ref))
         else:
             st.caption("No references available for this scenario.")
 

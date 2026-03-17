@@ -493,93 +493,113 @@ def _normalizar_nivel(nivel: NivelTripartido) -> NivelTripartido:
 # ─── Cálculo de parâmetros ───────────────────────────────────────────
 
 def calcular_decremento(
-    dispersao: float,
+    propostas: list[float],
     comportamento: Comportamento,
+    melhor_proposta: Optional[float] = None,
 ) -> float:
     """
-    Calcula o decremento mínimo ideal (%).
+    Calcula o decremento mínimo ideal (%) baseado nos gaps reais entre propostas.
 
     Lógica:
-    - Dispersão > 20%: 1.5% a 3.0%
-    - Dispersão 10% a 20%: 0.8% a 1.5%
-    - Dispersão < 10%: 0.3% a 0.8%
-
-    Ajuste pelo comportamento:
-    - Competitivo → topo da faixa (pode pressionar mais)
-    - Moderado → meio da faixa
-    - Conservador → base da faixa (cuidado para não assustar)
+    a) < 2 propostas → fallback neutro de 1.0%
+    b) Ordena propostas; calcula gap % entre cada par adjacente
+    c) gap_medio = média dos gaps
+    d) decremento_base = gap_medio × 0.4
+    e) Cap e floor por valor do leilão (melhor proposta):
+       - < $200k:   floor 0.5%, cap 14%
+       - $200k–$2M: floor 0.3%, cap 10%
+       - $2M–$10M:  floor 0.2%, cap 6%
+       - > $10M:    floor 0.1%, cap 3%
+    f) decremento = max(floor, min(cap, decremento_base))
+    g) Ajuste por comportamento: competitivo ×1.1, moderado ×1.0, conservador ×0.8
+    h) Arredondar a 2 casas decimais
 
     Referência: Negotiation Genius (Malhotra & Bazerman) —
     a calibração do decremento funciona como ancoragem progressiva.
     """
-    if dispersao > 20:
-        faixa_min, faixa_max = 1.5, 3.0
-    elif dispersao >= 10:
-        faixa_min, faixa_max = 0.8, 1.5
+    # e) Floor/cap dinâmicos por valor
+    mp = melhor_proposta
+    if mp is None or mp <= 0:
+        floor_pct, cap_pct = 0.3, 10.0
+    elif mp < 200_000:
+        floor_pct, cap_pct = 0.5, 14.0
+    elif mp < 2_000_000:
+        floor_pct, cap_pct = 0.3, 10.0
+    elif mp < 10_000_000:
+        floor_pct, cap_pct = 0.2, 6.0
     else:
-        faixa_min, faixa_max = 0.3, 0.8
+        floor_pct, cap_pct = 0.1, 3.0
 
+    # b-d) Gap-based base
+    valid = sorted(p for p in propostas if p and p > 0)
+    if len(valid) < 2:
+        decremento_base = 1.0  # fallback neutro
+    else:
+        gaps = [
+            (valid[i + 1] - valid[i]) / valid[i] * 100
+            for i in range(len(valid) - 1)
+        ]
+        gap_medio = sum(gaps) / len(gaps)
+        decremento_base = gap_medio * 0.4
+
+    # f) Aplicar floor e cap
+    decremento = max(floor_pct, min(cap_pct, decremento_base))
+
+    # g) Ajuste por comportamento
     ajuste = {
-        Comportamento.COMPETITIVO: 0.8,   # 80% da faixa (topo)
-        Comportamento.MODERADO: 0.5,      # meio
-        Comportamento.CONSERVADOR: 0.2,   # base
+        Comportamento.COMPETITIVO: 1.1,
+        Comportamento.MODERADO:    1.0,
+        Comportamento.CONSERVADOR: 0.8,
     }[comportamento]
 
-    return round(faixa_min + (faixa_max - faixa_min) * ajuste, 2)
+    return round(decremento * ajuste, 2)
 
 
 def calcular_preco_abertura(
     formato: FormatoLeilao,
     melhor_proposta: Optional[float],
     media_propostas: Optional[float],
-    interesse_estrategico: NivelTripartido,
+    pior_proposta: Optional[float],
+    num_fornecedores: int,
+    comoditizacao: NivelTripartido,
     dispersao: float,
 ) -> tuple[float, Optional[float]]:
     """
-    Calcula o preço de abertura sugerido (% e R$).
+    Calcula o preço de abertura sugerido (% relativo à melhor proposta, valor em $).
 
-    Retorna (percentual_relativo, valor_brl_ou_None).
+    Retorna (percentual_relativo, valor_ou_None).
 
     Regras por formato:
-    - Inglês Reverso: 5% abaixo da melhor proposta
-    - Japonês: próximo à média (precisa de espaço para descer)
-    - Holandês: bem abaixo da melhor; ritmo de subida calibrado
+    - Inglês (ambos): Best Response — suppliers enter with equalized prices.
+      Motor retorna 0.0 / None (sem opening price definido pelo comprador).
+    - Holandês: Buyer-Defined. N >= 4 → 20% abaixo da melhor; N < 4 → 10% abaixo.
+    - Japonês: Buyer-Defined. Commoditização Alta → melhor proposta (0%);
+      Média/Baixa → pior proposta (espaço máximo para descida).
 
     Referência: Negotiation Genius (Malhotra & Bazerman) —
     efeito de ancoragem no preço de abertura.
     """
     if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
-        # 5% abaixo da melhor proposta
-        pct = -5.0
-        valor = round(melhor_proposta * 0.95, 2) if melhor_proposta else None
-        return pct, valor
+        # Best Response: no buyer-defined opening price
+        return 0.0, None
 
     elif formato == FormatoLeilao.JAPONES:
-        # Preço inicial próximo à média (ou 5% acima da melhor se sem média)
-        if media_propostas:
-            # Ajuste: se dispersão alta, começar ligeiramente acima da média
-            ajuste = 1.02 if dispersao > 20 else 1.0
-            valor = round(media_propostas * ajuste, 2)
-            pct_vs_melhor = (
-                round(((valor / melhor_proposta) - 1) * 100, 1)
-                if melhor_proposta
-                else None
-            )
-            return pct_vs_melhor or 0.0, valor
-        elif melhor_proposta:
-            valor = round(melhor_proposta * 1.05, 2)
-            return 5.0, valor
+        # Alto: start at best proposal (tight — commodity suppliers will drop fast)
+        # Médio/Baixo: start at worst proposal (max room to descend)
+        if comoditizacao == NivelTripartido.ALTO:
+            return 0.0, melhor_proposta
         else:
-            return 5.0, None
+            if pior_proposta and melhor_proposta:
+                pct = round(((pior_proposta / melhor_proposta) - 1) * 100, 1)
+                return pct, pior_proposta
+            elif melhor_proposta:
+                return 0.0, melhor_proposta
+            else:
+                return 0.0, None
 
     elif formato == FormatoLeilao.HOLANDES:
-        # Preço inicial BEM abaixo da melhor proposta
-        # Alto interesse → pode começar mais baixo (fornecedores aceitarão subida)
-        desconto = {
-            NivelTripartido.ALTO: 0.20,   # 20% abaixo
-            NivelTripartido.MEDIO: 0.15,  # 15% abaixo
-            NivelTripartido.BAIXO: 0.10,  # 10% abaixo
-        }[interesse_estrategico]
+        # Buyer-Defined: start well below best; first supplier to accept wins
+        desconto = 0.20 if num_fornecedores >= 4 else 0.10
         pct = round(-desconto * 100, 1)
         valor = (
             round(melhor_proposta * (1 - desconto), 2)
@@ -597,7 +617,7 @@ def calcular_incremento_holandes(
     melhor_proposta: Optional[float],
 ) -> tuple[float, Optional[float]]:
     """
-    Calcula o incremento por tick do Holandês (% e R$).
+    Calcula o incremento por tick do Holandês (% e $).
 
     Alto interesse → subida mais lenta para maximizar extração.
     Baixo interesse → subida mais rápida para não perder fornecedores.
@@ -622,48 +642,102 @@ def calcular_duracao(
     num_fornecedores: int,
     dispersao: float,
     decremento: float,
-) -> int:
+    melhor_proposta: Optional[float] = None,
+    preco_abertura_pct: float = -10.0,
+    incremento_holandes_pct: Optional[float] = None,
+) -> tuple[int, Optional[int]]:
     """
-    Calcula a duração recomendada em minutos.
+    Calcula a duração recomendada em minutos e o intervalo por rodada (Japonês).
 
-    - Inglês: 20 a 45 min conforme número de fornecedores
-    - Holandês: 15 a 30 min
-    - Japonês: 5 a 10 min/rodada × rodadas estimadas
+    Retorna (duracao_minutos, intervalo_rodada_minutos_ou_None).
+
+    Inglês:
+      Base por Nº fornecedores: 2-3→15 min, 4-6→20 min, 7+→30 min.
+      +5 se INGLES_COMPLETO (termômetro), +5 se spread>30%, +5 se melhor>$2M.
+      Cap: 45 min.
+
+    Holandês:
+      Intervalo por tick: <$200k→0.5 min, $200k–$2M→1 min, >$2M→2 min.
+      Ticks estimados = |preco_abertura_pct| / incremento.
+      Cap: 30 min.
+
+    Japonês:
+      Intervalo por rodada: <$200k→3 min, $200k–$2M→5 min, >$2M→7 min.
+      Duração = rodadas × intervalo. Cap total: 90 min (reduzir rodadas se necessário).
     """
-    _CAP = 90  # hard cap: no auction should exceed 90 minutes
+    mp = melhor_proposta
 
     if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
-        duracao = 20 + max(0, num_fornecedores - 3) * 5
-        return min(duracao, _CAP)
+        if num_fornecedores <= 3:
+            base = 15
+        elif num_fornecedores <= 6:
+            base = 20
+        else:
+            base = 30
+        if formato == FormatoLeilao.INGLES_COMPLETO:
+            base += 5
+        if dispersao > 30:
+            base += 5
+        if mp and mp > 2_000_000:
+            base += 5
+        return min(base, 45), None
 
     elif formato == FormatoLeilao.HOLANDES:
-        duracao = 15 + max(0, num_fornecedores - 2) * 5
-        return min(duracao, _CAP)
+        if mp is None or mp < 200_000:
+            tick_min = 0.5
+        elif mp < 2_000_000:
+            tick_min = 1.0
+        else:
+            tick_min = 2.0
+        inc = incremento_holandes_pct or 1.0
+        ticks_estimados = max(1, round(abs(preco_abertura_pct) / inc))
+        duracao = max(5, min(round(ticks_estimados * tick_min), 30))
+        return duracao, None
 
     elif formato == FormatoLeilao.JAPONES:
+        if mp is None or mp < 200_000:
+            intervalo = 3
+        elif mp < 2_000_000:
+            intervalo = 5
+        else:
+            intervalo = 7
         rodadas = calcular_rodadas_japones(dispersao, decremento)
-        min_por_rodada = 5 if num_fornecedores <= 5 else 7
-        duracao = rodadas * min_por_rodada
-        if duracao > _CAP:
-            # Reduce round count proportionally, keep interval fixed
-            rodadas = _CAP // min_por_rodada
-            duracao = rodadas * min_por_rodada
-        return duracao
+        duracao = rodadas * intervalo
+        if duracao > 90:
+            rodadas = 90 // intervalo
+            duracao = rodadas * intervalo
+        return duracao, intervalo
 
-    return 30  # fallback
+    return 30, None  # fallback
 
 
-def calcular_prorrogacao(formato: FormatoLeilao) -> tuple[Optional[int], Optional[int]]:
+def calcular_prorrogacao(
+    formato: FormatoLeilao,
+    melhor_proposta: Optional[float] = None,
+) -> tuple[Optional[int], Optional[int]]:
     """
     Retorna (minutos_extensao, trigger_minutos) para prorrogação automática.
-    Aplicável apenas ao Inglês Reverso.
+    Apenas Inglês Reverso. Trigger sempre nos últimos 3 min.
+
+    Extensão por valor:
+    - < $200k:   2 min
+    - $200k–$2M: 3 min
+    - > $2M:     5 min
 
     Referência: Negotiation Genius — a prorrogação captura lances
     de última hora (sniping) e extrai valor residual.
     """
-    if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
-        return 3, 3  # 3 min de extensão se lance nos últimos 3 min
-    return None, None
+    if formato not in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
+        return None, None
+
+    mp = melhor_proposta
+    if mp is None or mp < 200_000:
+        extensao = 2
+    elif mp < 2_000_000:
+        extensao = 3
+    else:
+        extensao = 5
+    return extensao, 3  # trigger sempre 3 min
 
 
 def calcular_rodadas_japones(dispersao: float, decremento: float) -> int:
@@ -780,19 +854,26 @@ def estimar_saving(
 
     # Snap each saving to the nearest lower multiple of the minimum decrement
     # (a saving not achievable in whole decrement steps is not credible)
+    # Guarantee: if raw saving > 0, result is at least 1x decrement (never zeros out)
     import math
 
     def _snap(saving: float, dec: float) -> float:
         if dec <= 0 or saving <= 0:
             return saving
         snapped = math.floor(saving / dec) * dec
+        # If snapped rounds down to 0 (saving < 1 full decrement), use 1x decrement
         return round(max(snapped, dec), 2)
 
     pessimista = _snap(pessimista, decremento)
     realista   = _snap(realista,   decremento)
     otimista   = _snap(otimista,   decremento)
 
-    # Valores em R$
+    # Preserve ordering after snap (snapping can collapse pessimista == realista == otimista)
+    # Ensure pessimista <= realista <= otimista
+    realista = max(realista, pessimista)
+    otimista = max(otimista, realista)
+
+    # Valores em $
     mp = inp.melhor_proposta_brl
     pessimista_brl = round(mp * pessimista / 100, 2) if mp else None
     realista_brl = round(mp * realista / 100, 2) if mp else None
@@ -954,7 +1035,9 @@ def recomendar(inp: InputLeilao) -> Recomendacao:
         score_confianca = 0.5
 
     # 3) Calcular parâmetros
-    decremento_pct = calcular_decremento(inp.dispersao_precos, inp.comportamento_predominante)
+    decremento_pct = calcular_decremento(
+        inp._propostas, inp.comportamento_predominante, inp.melhor_proposta_brl
+    )
     decremento_brl = (
         round(inp.melhor_proposta_brl * decremento_pct / 100, 2)
         if inp.melhor_proposta_brl
@@ -965,12 +1048,31 @@ def recomendar(inp: InputLeilao) -> Recomendacao:
         formato=formato,
         melhor_proposta=inp.melhor_proposta_brl,
         media_propostas=inp.media_propostas_brl,
-        interesse_estrategico=inp.interesse_predominante,
+        pior_proposta=inp.pior_proposta_brl,
+        num_fornecedores=inp.num_fornecedores,
+        comoditizacao=inp.comoditizacao,
         dispersao=inp.dispersao_precos,
     )
 
-    duracao = calcular_duracao(formato, inp.num_fornecedores, inp.dispersao_precos, decremento_pct)
-    prorr_ext, prorr_trigger = calcular_prorrogacao(formato)
+    # Incremento Holandês calculado antes de calcular_duracao (necessário para estimar ticks)
+    inc_pct, inc_brl = None, None
+    if formato == FormatoLeilao.HOLANDES:
+        inc_pct, inc_brl = calcular_incremento_holandes(
+            inp.interesse_predominante,
+            inp.dispersao_precos,
+            inp.melhor_proposta_brl,
+        )
+
+    duracao, intervalo_rodada_calc = calcular_duracao(
+        formato,
+        inp.num_fornecedores,
+        inp.dispersao_precos,
+        decremento_pct,
+        melhor_proposta=inp.melhor_proposta_brl,
+        preco_abertura_pct=preco_abertura_pct,
+        incremento_holandes_pct=inc_pct,
+    )
+    prorr_ext, prorr_trigger = calcular_prorrogacao(formato, inp.melhor_proposta_brl)
 
     # Visibilidade — derived directly from recommended format (consistent by definition)
     if formato == FormatoLeilao.INGLES_COMPLETO:
@@ -980,21 +1082,12 @@ def recomendar(inp: InputLeilao) -> Recomendacao:
     else:
         visibilidade = None
 
-    # Rodadas (apenas Japonês)
+    # Rodadas e intervalo (apenas Japonês) — consistent with calcular_duracao output
     rodadas = None
     intervalo_rodada = None
-    if formato == FormatoLeilao.JAPONES:
-        rodadas = calcular_rodadas_japones(inp.dispersao_precos, decremento_pct)
-        intervalo_rodada = 5 if inp.num_fornecedores <= 5 else 7
-
-    # Incremento (apenas Holandês)
-    inc_pct, inc_brl = None, None
-    if formato == FormatoLeilao.HOLANDES:
-        inc_pct, inc_brl = calcular_incremento_holandes(
-            inp.interesse_predominante,
-            inp.dispersao_precos,
-            inp.melhor_proposta_brl,
-        )
+    if formato == FormatoLeilao.JAPONES and intervalo_rodada_calc:
+        intervalo_rodada = intervalo_rodada_calc
+        rodadas = duracao // intervalo_rodada if intervalo_rodada > 0 else calcular_rodadas_japones(inp.dispersao_precos, decremento_pct)
 
     parametros = ParametrosOtimizados(
         decremento_min_pct=decremento_pct,

@@ -101,6 +101,9 @@ class SimulacaoResult:
     narrativa: str
     preco_final_estimado_pct: Optional[float]  # % sobre melhor proposta original
     vencedor_provavel: Optional[FornecedorSimulado]
+    # Per-supplier realistic target drop + range for chart rendering.
+    # Each entry: {nome, proposta_inicial, alvo_realista, range_min, range_max, arquetipo}
+    alvos_por_fornecedor: list[dict] = field(default_factory=list)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -603,106 +606,165 @@ def _gerar_narrativa(
     formato: FormatoLeilao,
     vencedor: Optional[FornecedorSimulado],
     preco_final_pct: float,
+    rodadas_japones: int = 10,
 ) -> str:
+    from collections import defaultdict
+
     partes: list[str] = []
 
-    # ── Per-supplier contextual description ──────────────────────────────
     _arq_desc = {
         Arquetipo.AGGRESSIVE_LEADER:  "competitive, high interest — likely to bid early and often",
         Arquetipo.CAUTIOUS_FOLLOWER:  "calculated, watches ranking — activates in final sprint",
         Arquetipo.FLOOR_SETTER:       "moderate stance — will mark position but not overextend",
         Arquetipo.DROPOUT_CANDIDATE:  "conservative or low interest — likely to withdraw early",
     }
-    supplier_lines: list[str] = []
+
+    # ── Group suppliers by archetype for compact, natural-language descriptions ──
+    grupos: dict[Arquetipo, list[str]] = defaultdict(list)
     for f in fornecedores:
         label = f.nome_original or f"Supplier {f.id}"
-        supplier_lines.append(f"{label} ({_arq_desc[f.arquetipo]})")
-    partes.append("Supplier profiles: " + "; ".join(supplier_lines) + ".")
+        grupos[f.arquetipo].append(label)
+
+    def _join(nomes: list[str]) -> str:
+        if len(nomes) == 1:
+            return nomes[0]
+        return ", ".join(nomes[:-1]) + f" and {nomes[-1]}"
+
+    def _verb(nomes: list[str], singular: str, plural: str) -> str:
+        return singular if len(nomes) == 1 else plural
+
+    # Supplier profiles summary — one line per archetype group
+    perfil_lines = []
+    for arq in [Arquetipo.AGGRESSIVE_LEADER, Arquetipo.CAUTIOUS_FOLLOWER,
+                Arquetipo.FLOOR_SETTER, Arquetipo.DROPOUT_CANDIDATE]:
+        nomes = grupos.get(arq, [])
+        if nomes:
+            perfil_lines.append(
+                f"{_join(nomes)} ({arq.value}): {_arq_desc[arq]}"
+            )
+    partes.append("Supplier profiles: " + " — ".join(perfil_lines) + ".")
 
     if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
         tem_term = formato == FormatoLeilao.INGLES_COMPLETO
 
-        # Leaders who will open
-        leaders = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.AGGRESSIVE_LEADER]
-        followers = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.CAUTIOUS_FOLLOWER]
-        dropouts = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.DROPOUT_CANDIDATE]
+        leaders  = grupos.get(Arquetipo.AGGRESSIVE_LEADER, [])
+        followers = grupos.get(Arquetipo.CAUTIOUS_FOLLOWER, [])
+        dropouts  = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
 
-        opening = (
-            f"{', '.join(leaders)} {'is' if len(leaders)==1 else 'are'} expected to open immediately "
-            f"with aggressive bids to establish the price floor."
-            if leaders else
-            "No supplier with an aggressive profile was identified — the opening phase may be slow."
-        )
-        partes.append(opening)
+        if leaders:
+            partes.append(
+                f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
+                f"{_verb(leaders, 'is', 'are')} expected to open immediately with aggressive "
+                f"bids to establish the price floor."
+            )
+        else:
+            partes.append(
+                "No supplier with an aggressive profile was identified — "
+                "the opening phase may be slow."
+            )
 
         if dropouts:
             partes.append(
-                f"{', '.join(dropouts)} {'is' if len(dropouts)==1 else 'are'} likely to "
-                f"withdraw early or not bid actively due to conservative stance or low interest."
+                f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                f"{_verb(dropouts, 'is', 'are')} likely to withdraw early or not bid "
+                f"actively due to conservative stance or low strategic interest."
             )
 
         if followers:
-            sprint = (
-                f"{', '.join(followers)} {'is' if len(followers)==1 else 'are'} expected to "
-                f"activate in the final sprint. "
+            partes.append(
+                f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
+                f"{_verb(followers, 'is', 'are')} expected to activate in the final sprint. "
                 + (
                     "The thermometer will signal proximity to the leader, triggering sniping bids."
                     if tem_term else
                     "Without the thermometer, ranking position alone guides their final bid timing."
                 )
             )
-            partes.append(sprint)
 
     elif formato == FormatoLeilao.HOLANDES:
-        low_threshold = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.AGGRESSIVE_LEADER]
-        high_threshold = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.DROPOUT_CANDIDATE]
-        if low_threshold:
+        leaders  = grupos.get(Arquetipo.AGGRESSIVE_LEADER, [])
+        dropouts  = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
+
+        if leaders:
             partes.append(
-                f"{', '.join(low_threshold)} {'has' if len(low_threshold)==1 else 'have'} "
-                f"a low acceptance threshold and may accept the price in early ticks — "
-                f"the tick increment must be calibrated carefully to maximize extraction."
+                f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
+                f"{_verb(leaders, 'has', 'have')} a low acceptance threshold and may accept "
+                f"the price in early ticks — the tick increment must be calibrated carefully "
+                f"to maximize extraction."
             )
-        if high_threshold:
+        if dropouts:
             partes.append(
-                f"{', '.join(high_threshold)} {'is' if len(high_threshold)==1 else 'are'} "
-                f"unlikely to accept unless the price climbs close to the original proposal."
+                f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                f"{_verb(dropouts, 'is', 'are')} unlikely to accept unless the price climbs "
+                f"close to the original proposal."
             )
 
     elif formato == FormatoLeilao.JAPONES:
-        early_exit = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.DROPOUT_CANDIDATE]
-        mid_exit = [f.nome_original or f"Supplier {f.id}" for f in fornecedores if f.arquetipo == Arquetipo.FLOOR_SETTER]
-        if early_exit:
+        dropouts      = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
+        floor_setters = grupos.get(Arquetipo.FLOOR_SETTER, [])
+        followers     = grupos.get(Arquetipo.CAUTIOUS_FOLLOWER, [])
+        leaders       = grupos.get(Arquetipo.AGGRESSIVE_LEADER, [])
+
+        num_r    = rodadas_japones
+        fs_round = max(2, num_r // 3)
+        cf_round = max(3, num_r * 2 // 3)
+
+        if dropouts:
             partes.append(
-                f"{', '.join(early_exit)} {'is' if len(early_exit)==1 else 'are'} expected "
-                f"to be eliminated in early rounds — conservative profile or low interest."
+                f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                f"{_verb(dropouts, 'is', 'are')} expected to be eliminated in round 1 "
+                f"— conservative profile or low strategic interest prevents acceptance at opening price."
             )
-        if mid_exit:
+        if floor_setters:
             partes.append(
-                f"{', '.join(mid_exit)} {'is' if len(mid_exit)==1 else 'are'} expected "
-                f"to exit in the first third of rounds as prices drop below their floor."
+                f"{_join(floor_setters)} (Floor-setter{'s' if len(floor_setters)>1 else ''}) "
+                f"{_verb(floor_setters, 'is', 'are')} expected to exit around rounds "
+                f"{fs_round}–{fs_round + 1} as prices approach their cost floor."
+            )
+        if followers:
+            partes.append(
+                f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
+                f"{_verb(followers, 'is', 'are')} projected to be eliminated around round {cf_round}, "
+                f"when prices drop below their viability threshold."
+            )
+
+        # Final rounds prediction
+        finalists: list[str] = leaders[:]
+        if not finalists and followers:
+            finalists = followers
+        elif followers:
+            finalists = leaders + followers[:1]
+        if len(finalists) >= 2:
+            partes.append(
+                f"The final rounds are expected to resolve between {_join(finalists)}."
+            )
+        elif finalists:
+            partes.append(
+                f"{finalists[0]} is projected to be the last supplier standing."
             )
 
     if vencedor:
         venc_nome = vencedor.nome_original or f"Supplier {vencedor.id}"
-        # Find runner-up (second lowest cost among active bidders)
         bidders = [f for f in fornecedores if f.arquetipo != Arquetipo.DROPOUT_CANDIDATE]
-        bidders_sorted = sorted(bidders, key=lambda f: f.custo_relativo)
-        runner_up = bidders_sorted[1] if len(bidders_sorted) > 1 else None
+        others = sorted(
+            [f for f in bidders if f.id != vencedor.id],
+            key=lambda f: f.custo_relativo,
+        )
+        runner_up = others[0] if others else None
         runner_nome = (runner_up.nome_original or f"Supplier {runner_up.id}") if runner_up else None
 
         if runner_nome:
             partes.append(
                 f"Best positioned to win: {venc_nome}, based on lowest equalized proposal "
                 f"and behavioral profile, followed by {runner_nome}. "
-                f"Based on the recommendation engine's analysis, the auction is expected "
-                f"to close at approximately {abs(preco_final_pct):.1f}% below the best "
-                f"equalization price (realistic scenario)."
+                f"Auction expected to close at approximately {abs(preco_final_pct):.1f}% "
+                f"below the best equalization price (realistic scenario)."
             )
         else:
             partes.append(
                 f"Best positioned to win: {venc_nome}, based on lowest equalized proposal "
                 f"and behavioral profile. "
-                f"Expected closing: {abs(preco_final_pct):.1f}% below the best equalization price."
+                f"Expected closing: {abs(preco_final_pct):.1f}% below best equalization price."
             )
 
     if alertas:
@@ -714,6 +776,70 @@ def _gerar_narrativa(
             )
 
     return "\n\n".join(partes)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# ALVOS POR FORNECEDOR (para gráfico)
+# ──────────────────────────────────────────────────────────────────────
+
+def _calcular_alvos_por_fornecedor(
+    inp: InputLeilao,
+    fornecedores: list[FornecedorSimulado],
+    saving_alvo: float,  # rec.saving.realista_pct (positive %)
+    formato: Optional[FormatoLeilao] = None,
+    params=None,  # ParametrosLeilao or None
+) -> list[dict]:
+    """
+    Calcula o alvo de saving individual por fornecedor, para renderização de gráfico.
+
+    Aggressive Leader cede mais (saving × 1.3), Cautious Follower e Floor-setter
+    cedem o saving base, Dropout cede menos (saving × 0.5).
+    Range = ±30% do alvo individual.
+
+    Dutch: range_min/max rounded to nearest Dutch increment.
+    Japanese: range_min/max rounded to nearest round decrement.
+    """
+    _MULT = {
+        Arquetipo.AGGRESSIVE_LEADER:  1.3,
+        Arquetipo.CAUTIOUS_FOLLOWER:  1.0,
+        Arquetipo.FLOOR_SETTER:       1.0,
+        Arquetipo.DROPOUT_CANDIDATE:  0.5,
+    }
+
+    def _snap_to_step(value: float, step: float) -> float:
+        if step and step > 0:
+            return round(round(value / step) * step, 2)
+        return round(value, 2)
+
+    # Determine discretization step for range bounds
+    _step: Optional[float] = None
+    if formato == FormatoLeilao.HOLANDES and params and params.incremento_holandes_pct:
+        _step = params.incremento_holandes_pct
+    elif formato == FormatoLeilao.JAPONES and params and params.decremento_min_pct:
+        _step = params.decremento_min_pct
+
+    resultado = []
+    for idx, fs in enumerate(fornecedores):
+        proposta_inicial = (
+            inp.fornecedores[idx].proposta_brl
+            if idx < len(inp.fornecedores)
+            else None
+        )
+        alvo = round(saving_alvo * _MULT[fs.arquetipo], 2)
+        rmin = round(alvo * 0.7, 2)
+        rmax = round(alvo * 1.3, 2)
+        if _step:
+            rmin = _snap_to_step(rmin, _step)
+            rmax = _snap_to_step(rmax, _step)
+        resultado.append({
+            "nome": fs.nome_original or f"Supplier {fs.id}",
+            "proposta_inicial": proposta_inicial,
+            "alvo_realista": alvo,
+            "range_min": rmin,
+            "range_max": rmax,
+            "arquetipo": fs.arquetipo.value,
+        })
+    return resultado
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -787,18 +913,35 @@ def simular(inp: InputLeilao, rec: Recomendacao) -> SimulacaoResult:
 
     # Override final price with motor's realistic saving — simulator drives BEHAVIOR, motor drives NUMBERS
     # This ensures consistency: the displayed saving and the simulation closing price are always aligned.
-    if rec.saving and rec.saving.realista_pct:
-        preco_final_canonico = -rec.saving.realista_pct  # saving = price fell by this %
+    saving_alvo = rec.saving.realista_pct if (rec.saving and rec.saving.realista_pct) else None
+    if saving_alvo:
+        preco_final_canonico = -saving_alvo  # saving = price fell by this %
     else:
         preco_final_canonico = round(preco_final, 2)
+        saving_alvo = abs(preco_final_canonico)
+
+    # Update ENCERRAMENTO event to reflect canonical price (motor's realistic saving)
+    for ev in eventos:
+        if ev.tipo == TipoEvento.ENCERRAMENTO:
+            ev.preco_relativo = preco_final_canonico
+            venc_nome = ev.fornecedor.nome_original or f"Supplier {ev.fornecedor.id}"
+            ev.descricao = (
+                f"Auction closed. Best positioned to win: {venc_nome} "
+                f"— expected closing at {abs(preco_final_canonico):.1f}% below best "
+                f"equalization price (motor realistic saving)."
+            )
 
     # Gerar alertas
     alertas = _gerar_alertas(inp, fornecedores, eventos, formato)
 
     # Gerar narrativa determinística (uses canonical price)
     narrativa = _gerar_narrativa(
-        inp, fornecedores, eventos, alertas, formato, vencedor, abs(preco_final_canonico)
+        inp, fornecedores, eventos, alertas, formato, vencedor, abs(preco_final_canonico),
+        rodadas_japones=rodadas_japones or 10,
     )
+
+    # Calcular alvos individuais por fornecedor (para gráfico no app)
+    alvos = _calcular_alvos_por_fornecedor(inp, fornecedores, saving_alvo, formato=formato, params=params)
 
     return SimulacaoResult(
         formato=formato,
@@ -808,6 +951,7 @@ def simular(inp: InputLeilao, rec: Recomendacao) -> SimulacaoResult:
         narrativa=narrativa,
         preco_final_estimado_pct=preco_final_canonico,
         vencedor_provavel=vencedor,
+        alvos_por_fornecedor=alvos,
     )
 
 

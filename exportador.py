@@ -11,6 +11,11 @@ import io
 from datetime import datetime
 from typing import Optional
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -18,6 +23,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
     HRFlowable,
+    Image as RLImage,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -261,7 +267,7 @@ def _sp(h: float = 0.3) -> Spacer:
 def _fmt_brl(value: Optional[float]) -> str:
     if value is None:
         return "—"
-    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"$ {value:,.2f}"
 
 
 def _fmt_pct(value: Optional[float], suffix: str = "%") -> str:
@@ -371,12 +377,12 @@ def _section_scenario_summary(
     # ── Supplier profiles ────────────────────────────────────────────
     sup_rows: list[list] = [[
         Paragraph("Supplier", styles["table_header"]),
-        Paragraph("Proposal (BRL)", styles["table_header"]),
+        Paragraph("Proposal ($)", styles["table_header"]),
         Paragraph("Behavior", styles["table_header"]),
         Paragraph("Strategic Interest", styles["table_header"]),
     ]]
     for forn in inp.fornecedores:
-        proposta = f"R$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
+        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
         sup_rows.append([
             Paragraph(forn.nome, styles["table_cell_bold"]),
             Paragraph(proposta, styles["table_cell"]),
@@ -462,7 +468,7 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float) -> list:
         [
             Paragraph("Parameter", styles["table_header"]),
             Paragraph("Value (%)", styles["table_header"]),
-            Paragraph("Value (R$)", styles["table_header"]),
+            Paragraph("Value ($)", styles["table_header"]),
         ]
     ]
 
@@ -713,7 +719,7 @@ def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float) -> list:
 
 def _section_references(styles: dict, rec: Recomendacao, page_w: float) -> list:
     elements = []
-    elements.append(Paragraph("6. Theoretical References", styles["section_title"]))
+    elements.append(Paragraph("7. Theoretical References", styles["section_title"]))
 
     if not rec.referencias:
         return elements
@@ -767,10 +773,10 @@ def _section_suppliers(styles: dict, inp: InputLeilao, page_w: float) -> list:
         "Baixo": "Low",
     }
 
-    header = ["Supplier", "Proposal (BRL)", "Strategic Interest", "Behavior"]
+    header = ["Supplier", "Proposal ($)", "Strategic Interest", "Behavior"]
     rows = [header]
     for forn in inp.fornecedores:
-        proposta = f"R$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
+        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
         rows.append([
             forn.nome,
             proposta,
@@ -798,6 +804,162 @@ def _section_suppliers(styles: dict, inp: InputLeilao, page_w: float) -> list:
     ]))
     elements.append(tbl)
     elements.append(_sp(0.3))
+    return elements
+
+
+def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
+    """
+    Generates the per-supplier uncertainty projection chart.
+    Returns (fig, has_data). has_data=False when no supplier has a proposal value.
+
+    dark=True  → dark-mode palette (transparent bg, white text) for Streamlit.
+    dark=False → light palette (white bg, dark text) for PDF export.
+
+    Each entry in alvos: {nome, proposta_inicial, alvo_realista, range_min, range_max, arquetipo}
+    """
+    with_data = [a for a in alvos if a.get("proposta_inicial")]
+    if not with_data:
+        return None, False
+
+    _INITIAL = {
+        "Aggressive Leader": "A",
+        "Cautious Follower": "C",
+        "Floor-setter":      "F",
+        "Dropout Candidate": "D",
+    }
+
+    # Colour palette — dark mode vs PDF light mode
+    _C_CIRCLE  = "#5DADE2"
+    _C_DIAMOND = "#2ECC71"
+    _C_BOX     = "#5DADE2"
+    _C_ANNOT   = "white"   if dark else "#374151"
+    _C_TITLE   = "white"   if dark else "#0D2137"
+    _C_LABELS  = "white"   if dark else "#374151"
+    _C_GRID    = "#4A4A6A" if dark else "#F3F4F6"
+    _C_SPINE   = "#555577" if dark else "#E5E7EB"
+    _C_LEG     = "white"   if dark else "#6B7280"
+
+    n = len(with_data)
+    fig, ax = plt.subplots(figsize=(max(7, n * 1.6), 5))
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+
+    for i, a in enumerate(with_data):
+        prop        = a["proposta_inicial"]
+        alvo_pct    = a["alvo_realista"]
+        rmin_pct    = a["range_min"]   # lower saving → higher price
+        rmax_pct    = a["range_max"]   # higher saving → lower price
+
+        target      = prop * (1 - alvo_pct / 100)
+        price_upper = prop * (1 - rmin_pct / 100)
+        price_lower = prop * (1 - rmax_pct / 100)
+
+        # Uncertainty box
+        ax.add_patch(mpatches.Rectangle(
+            (i - 0.25, price_lower), 0.5, price_upper - price_lower,
+            facecolor=_C_BOX, alpha=0.30,
+            edgecolor=_C_CIRCLE, linewidth=0.8, zorder=2,
+        ))
+
+        # Initial proposal — open circle
+        ax.plot(i, prop, marker='o', color=_C_CIRCLE, markersize=11,
+                markerfacecolor='none', markeredgewidth=2.2, zorder=5, linestyle='None')
+
+        # Realistic target — filled diamond
+        ax.plot(i, target, marker='D', color=_C_DIAMOND, markersize=8,
+                markerfacecolor=_C_DIAMOND, zorder=5, linestyle='None')
+
+        # Alternate annotation offsets to prevent overlap when proposals are close
+        _above = i % 2 == 0
+        ax.annotate(
+            f"${prop:,.0f}", xy=(i, prop),
+            xytext=(8, 6 if _above else -14),
+            textcoords="offset points", fontsize=7.5,
+            color=_C_ANNOT, fontweight='bold',
+            va='bottom' if _above else 'top',
+        )
+        ax.annotate(
+            f"${target:,.0f}", xy=(i, target),
+            xytext=(8, -6 if _above else 8),
+            textcoords="offset points", fontsize=7.5,
+            color=_C_ANNOT, fontweight='bold',
+            va='top' if _above else 'bottom',
+        )
+
+    xlabels = [
+        f"{a['nome']} ({_INITIAL.get(a['arquetipo'], '?')})"
+        for a in with_data
+    ]
+    rotate = n > 4
+    ax.set_xticks(range(n))
+    ax.set_xticklabels(
+        xlabels, fontsize=8.5, color=_C_LABELS,
+        rotation=20 if rotate else 0,
+        ha='right' if rotate else 'center',
+    )
+
+    all_props = [a["proposta_inicial"] for a in with_data]
+    min_price = min(a["proposta_inicial"] * (1 - a["range_max"] / 100) for a in with_data)
+    ax.set_ylim(min_price * 0.93, max(all_props) * 1.10)
+    ax.set_xlim(-0.6, n - 0.4)
+
+    ax.set_ylabel("Price ($)", fontsize=9, color=_C_LABELS)
+    ax.set_title(
+        "Reverse Auction Planning — Uncertainty Projection",
+        fontsize=11, fontweight='bold', color=_C_TITLE, pad=12,
+    )
+    ax.tick_params(colors=_C_LABELS, labelsize=8)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color(_C_SPINE)
+    ax.spines["bottom"].set_color(_C_SPINE)
+    ax.yaxis.grid(True, color=_C_GRID, zorder=0, linewidth=0.7)
+
+    leg_handles = [
+        plt.Line2D([0], [0], marker='o', color=_C_CIRCLE, markerfacecolor='none',
+                   markeredgewidth=2, markersize=9, linestyle='None', label='○  Initial Proposal'),
+        plt.Line2D([0], [0], marker='D', color=_C_DIAMOND, markerfacecolor=_C_DIAMOND,
+                   markersize=7, linestyle='None', label='◆  Realistic Target'),
+        mpatches.Patch(facecolor=_C_BOX, alpha=0.6, edgecolor=_C_CIRCLE,
+                       label='█  Uncertainty Range'),
+    ]
+    ax.legend(
+        handles=leg_handles,
+        loc='lower center', bbox_to_anchor=(0.5, -0.30 if not rotate else -0.42),
+        ncol=3, fontsize=8.5, framealpha=0, labelcolor=_C_LEG,
+    )
+    fig.text(0.98, 0.02, "BidWise", ha='right', va='bottom',
+             fontsize=7, color='#9CA3AF', style='italic')
+
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.22 if not rotate else 0.30)
+    return fig, True
+
+
+def _section_uncertainty_chart(
+    styles: dict,
+    sim: SimulacaoResult,
+    page_w: float,
+) -> list:
+    elements = []
+    elements.append(Paragraph("6. Uncertainty Projection", styles["section_title"]))
+
+    fig, has_data = draw_uncertainty_chart(sim.alvos_por_fornecedor, dark=False)
+    if not has_data:
+        elements.append(Paragraph(
+            "No chart available — enter supplier proposal values in the input form.",
+            styles["body"],
+        ))
+        return elements
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150, bbox_inches='tight',
+                facecolor='white', transparent=False)
+    plt.close(fig)
+    buf.seek(0)
+
+    img = RLImage(buf, width=page_w, height=page_w * 0.56)
+    elements.append(img)
     return elements
 
 
@@ -871,9 +1033,9 @@ def gerar_pdf(
 
     story.extend(_section_alerts(styles, sim, page_w))
 
-    story.extend(_section_references(styles, rec, page_w))
+    story.extend(_section_uncertainty_chart(styles, sim, page_w))
 
-    story.extend(_section_suppliers(styles, inp, page_w))
+    story.extend(_section_references(styles, rec, page_w))
 
     story.extend(_section_footer(styles))
 
@@ -906,7 +1068,6 @@ if __name__ == "__main__":
         ],
         kraljic=QuadranteKraljic.ALAVANCA,
         comoditizacao=NivelTripartido.ALTO,
-        urgencia=NivelTripartido.MEDIO,
     )
 
     rec = recomendar(inp)
