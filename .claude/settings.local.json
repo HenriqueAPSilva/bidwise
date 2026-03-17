@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python motor.py)",
+      "Bash(python simulador.py)",
+      "Bash(python prompt_engine.py)",
+      "Bash(python exportador.py)",
+      "Bash(pip install:*)",
+      "Bash(pip show:*)",
+      "Bash(python -c \"import app\")",
+      "Bash(python -c \":*)",
+      "Bash(python -m streamlit run app.py --server.headless true --server.port 8501)",
+      "Bash(python -m streamlit run app.py --server.headless true --server.port 8502)",
+      "Bash(python -m streamlit run app.py --server.headless true --server.port 8503)",
+      "Bash(python:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8510)"
+    ]
+  }
+}

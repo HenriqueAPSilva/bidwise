@@ -1,0 +1,921 @@
+"""
+exportador.py — Geração de relatório PDF com ReportLab
+Autor: Henrique Alexandre Pinto Silva
+Descrição: Gera relatório PDF completo da estratégia de leilão reverso.
+           Retorna bytes — não salva em disco (uso com st.download_button).
+"""
+
+from __future__ import annotations
+
+import io
+from datetime import datetime
+from typing import Optional
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm, mm
+from reportlab.platypus import (
+    HRFlowable,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+from motor import FormatoLeilao, InputLeilao, Recomendacao
+from simulador import SimulacaoResult, TipoAlerta
+
+_FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
+    FormatoLeilao.INGLES_COMPLETO: "English Reverse — Ranking + Thermometer",
+    FormatoLeilao.INGLES_REDUZIDO: "English Reverse — Ranking Only",
+    FormatoLeilao.HOLANDES:        "Dutch Reverse",
+    FormatoLeilao.JAPONES:         "Japanese Reverse",
+    FormatoLeilao.NAO_LEILAO:      "Do Not Auction",
+}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# PALETA DE CORES
+# ──────────────────────────────────────────────────────────────────────
+
+NAVY       = colors.HexColor("#0D2137")
+BLUE       = colors.HexColor("#1A56A0")
+LIGHT_BLUE = colors.HexColor("#EBF3FB")
+TEAL       = colors.HexColor("#0E7C7B")
+GREEN      = colors.HexColor("#1A7A4A")
+GREEN_BG   = colors.HexColor("#E8F5EE")
+AMBER      = colors.HexColor("#B45309")
+AMBER_BG   = colors.HexColor("#FEF3C7")
+RED        = colors.HexColor("#B91C1C")
+RED_BG     = colors.HexColor("#FEE2E2")
+GRAY_LIGHT = colors.HexColor("#F3F4F6")
+GRAY_MID   = colors.HexColor("#9CA3AF")
+GRAY_DARK  = colors.HexColor("#374151")
+WHITE      = colors.white
+BLACK      = colors.black
+
+# Cor de destaque por formato
+_FORMAT_COLORS: dict[FormatoLeilao, tuple] = {
+    FormatoLeilao.INGLES_COMPLETO:  (BLUE,  LIGHT_BLUE),
+    FormatoLeilao.INGLES_REDUZIDO:  (TEAL,  colors.HexColor("#E6F5F5")),
+    FormatoLeilao.HOLANDES:         (colors.HexColor("#6B21A8"), colors.HexColor("#F3E8FF")),
+    FormatoLeilao.JAPONES:          (colors.HexColor("#B45309"), colors.HexColor("#FEF9EE")),
+    FormatoLeilao.NAO_LEILAO:       (RED,   RED_BG),
+}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# ESTILOS DE PARÁGRAFO
+# ──────────────────────────────────────────────────────────────────────
+
+def _build_styles() -> dict[str, ParagraphStyle]:
+    base = getSampleStyleSheet()
+
+    return {
+        "logo": ParagraphStyle(
+            "logo",
+            fontName="Helvetica-Bold",
+            fontSize=28,
+            textColor=NAVY,
+            leading=34,
+            alignment=TA_LEFT,
+        ),
+        "subtitle": ParagraphStyle(
+            "subtitle",
+            fontName="Helvetica",
+            fontSize=11,
+            textColor=GRAY_DARK,
+            leading=14,
+            alignment=TA_LEFT,
+        ),
+        "meta": ParagraphStyle(
+            "meta",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=GRAY_MID,
+            leading=12,
+            alignment=TA_RIGHT,
+        ),
+        "section_title": ParagraphStyle(
+            "section_title",
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            textColor=NAVY,
+            leading=16,
+            spaceBefore=14,
+            spaceAfter=4,
+        ),
+        "format_label": ParagraphStyle(
+            "format_label",
+            fontName="Helvetica-Bold",
+            fontSize=15,
+            textColor=WHITE,
+            leading=20,
+            alignment=TA_LEFT,
+        ),
+        "format_sublabel": ParagraphStyle(
+            "format_sublabel",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=WHITE,
+            leading=12,
+            alignment=TA_LEFT,
+        ),
+        "confidence": ParagraphStyle(
+            "confidence",
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            textColor=WHITE,
+            leading=14,
+            alignment=TA_RIGHT,
+        ),
+        "body": ParagraphStyle(
+            "body",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=GRAY_DARK,
+            leading=13,
+            spaceAfter=4,
+        ),
+        "body_card": ParagraphStyle(
+            "body_card",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=GRAY_DARK,
+            leading=13,
+        ),
+        "table_header": ParagraphStyle(
+            "table_header",
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            textColor=WHITE,
+            leading=12,
+            alignment=TA_CENTER,
+        ),
+        "table_cell": ParagraphStyle(
+            "table_cell",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=GRAY_DARK,
+            leading=12,
+        ),
+        "table_cell_bold": ParagraphStyle(
+            "table_cell_bold",
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            textColor=GRAY_DARK,
+            leading=12,
+        ),
+        "saving_label": ParagraphStyle(
+            "saving_label",
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            textColor=GRAY_DARK,
+            leading=14,
+            alignment=TA_CENTER,
+        ),
+        "saving_pct": ParagraphStyle(
+            "saving_pct",
+            fontName="Helvetica-Bold",
+            fontSize=22,
+            leading=26,
+            alignment=TA_CENTER,
+        ),
+        "saving_brl": ParagraphStyle(
+            "saving_brl",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=GRAY_MID,
+            leading=12,
+            alignment=TA_CENTER,
+        ),
+        "alert_high": ParagraphStyle(
+            "alert_high",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=RED,
+            leading=12,
+            leftIndent=12,
+        ),
+        "alert_mid": ParagraphStyle(
+            "alert_mid",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=AMBER,
+            leading=12,
+            leftIndent=12,
+        ),
+        "alert_low": ParagraphStyle(
+            "alert_low",
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=TEAL,
+            leading=12,
+            leftIndent=12,
+        ),
+        "ai_body": ParagraphStyle(
+            "ai_body",
+            fontName="Helvetica-Oblique",
+            fontSize=9,
+            textColor=GRAY_DARK,
+            leading=13,
+            leftIndent=8,
+            rightIndent=8,
+        ),
+        "footer": ParagraphStyle(
+            "footer",
+            fontName="Helvetica",
+            fontSize=7.5,
+            textColor=GRAY_MID,
+            leading=11,
+            alignment=TA_CENTER,
+        ),
+        "disclaimer": ParagraphStyle(
+            "disclaimer",
+            fontName="Helvetica-Oblique",
+            fontSize=7.5,
+            textColor=GRAY_MID,
+            leading=11,
+            alignment=TA_CENTER,
+        ),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# HELPERS
+# ──────────────────────────────────────────────────────────────────────
+
+def _hr(styles: dict) -> HRFlowable:
+    return HRFlowable(
+        width="100%", thickness=0.5, color=GRAY_LIGHT, spaceAfter=6, spaceBefore=6
+    )
+
+
+def _sp(h: float = 0.3) -> Spacer:
+    return Spacer(1, h * cm)
+
+
+def _fmt_brl(value: Optional[float]) -> str:
+    if value is None:
+        return "—"
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _fmt_pct(value: Optional[float], suffix: str = "%") -> str:
+    if value is None:
+        return "—"
+    return f"{value:.1f}{suffix}"
+
+
+def _confidence_label(score: float) -> str:
+    if score >= 0.30:
+        return f"High confidence ({score:.0%})"
+    elif score >= 0.15:
+        return f"Moderate confidence ({score:.0%})"
+    else:
+        return f"Low confidence — formats are close ({score:.0%})"
+
+
+# ──────────────────────────────────────────────────────────────────────
+# SEÇÕES DO DOCUMENTO
+# ──────────────────────────────────────────────────────────────────────
+
+def _section_header(styles: dict, page_w: float) -> list:
+    now = datetime.now().strftime("%Y-%m-%d  %H:%M")
+    elements = []
+
+    # Linha do logo + meta lado a lado via tabela
+    logo_p   = Paragraph("BidWise", styles["logo"])
+    sub_p    = Paragraph("Reverse Auction Strategy Report", styles["subtitle"])
+    meta_p   = Paragraph(f"Generated on {now}", styles["meta"])
+
+    header_table = Table(
+        [[logo_p, meta_p]],
+        colWidths=[page_w * 0.65, page_w * 0.35],
+    )
+    header_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+    ]))
+
+    elements.append(header_table)
+    elements.append(_sp(0.15))
+    elements.append(sub_p)
+    elements.append(_sp(0.2))
+    elements.append(HRFlowable(width="100%", thickness=2, color=NAVY,
+                                spaceAfter=8, spaceBefore=0))
+    return elements
+
+
+def _section_scenario_summary(
+    styles: dict, inp: InputLeilao, page_w: float
+) -> list:
+    """Scenario inputs snapshot — printed before the recommendation card."""
+    elements: list = []
+    elements.append(Paragraph("Scenario Summary", styles["section_title"]))
+
+    _KRALJIC_EN = {
+        "Alavanca":    "Leverage",
+        "Estratégico": "Strategic",
+        "Gargalo":     "Bottleneck",
+        "Não crítico": "Non-critical",
+    }
+    _COMOD_EN = {
+        "Alto":  "High",
+        "Médio": "Medium",
+        "Baixo": "Low",
+    }
+
+    _BEHAV_EN = {
+        "Competitivo": "Competitive",
+        "Moderado":    "Moderate",
+        "Conservador": "Conservative",
+    }
+    _INT_EN = {
+        "Alto":  "High",
+        "Médio": "Medium",
+        "Baixo": "Low",
+    }
+
+    # ── Auction context ──────────────────────────────────────────────
+    ctx_rows = [
+        [Paragraph("Parameter", styles["table_header"]),
+         Paragraph("Value", styles["table_header"])],
+        [Paragraph("Kraljic quadrant", styles["table_cell_bold"]),
+         Paragraph(_KRALJIC_EN.get(inp.kraljic.value, inp.kraljic.value), styles["table_cell"])],
+        [Paragraph("Item commoditization", styles["table_cell_bold"]),
+         Paragraph(_COMOD_EN.get(inp.comoditizacao.value, inp.comoditizacao.value), styles["table_cell"])],
+        [Paragraph("Number of suppliers", styles["table_cell_bold"]),
+         Paragraph(str(inp.num_fornecedores), styles["table_cell"])],
+        [Paragraph("Price spread", styles["table_cell_bold"]),
+         Paragraph(f"{inp.dispersao_precos:.1f}%", styles["table_cell"])],
+    ]
+    ctx_table = Table(ctx_rows, colWidths=[page_w * 0.50, page_w * 0.50])
+    ctx_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, GRAY_LIGHT]),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(ctx_table)
+    elements.append(_sp(0.25))
+
+    # ── Supplier profiles ────────────────────────────────────────────
+    sup_rows: list[list] = [[
+        Paragraph("Supplier", styles["table_header"]),
+        Paragraph("Proposal (BRL)", styles["table_header"]),
+        Paragraph("Behavior", styles["table_header"]),
+        Paragraph("Strategic Interest", styles["table_header"]),
+    ]]
+    for forn in inp.fornecedores:
+        proposta = f"R$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
+        sup_rows.append([
+            Paragraph(forn.nome, styles["table_cell_bold"]),
+            Paragraph(proposta, styles["table_cell"]),
+            Paragraph(_BEHAV_EN.get(forn.comportamento.value, forn.comportamento.value), styles["table_cell"]),
+            Paragraph(_INT_EN.get(forn.interesse_estrategico.value, forn.interesse_estrategico.value), styles["table_cell"]),
+        ])
+
+    sup_col_w = [page_w * 0.28, page_w * 0.25, page_w * 0.24, page_w * 0.23]
+    sup_table = Table(sup_rows, colWidths=sup_col_w)
+    sup_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, LIGHT_BLUE]),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("ALIGN", (2, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(sup_table)
+    return elements
+
+
+def _section_recommendation_card(
+    styles: dict, rec: Recomendacao, page_w: float
+) -> list:
+    elements = []
+    elements.append(Paragraph("1. Recommended Format", styles["section_title"]))
+
+    fg_color, bg_color = _FORMAT_COLORS.get(
+        rec.formato, (BLUE, LIGHT_BLUE)
+    )
+
+    # Colored card header
+    format_p = Paragraph(_FORMAT_LABEL_EN.get(rec.formato, rec.formato.value), styles["format_label"])
+    card_header = Table(
+        [[format_p]],
+        colWidths=[page_w],
+    )
+    card_header.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), fg_color),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("ROUNDEDCORNERS", [4, 4, 0, 0]),
+    ]))
+
+    # Corpo do card: justificativa
+    just_p = Paragraph(rec.justificativa, styles["body_card"])
+    card_body = Table(
+        [[just_p]],
+        colWidths=[page_w],
+    )
+    card_body.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), bg_color),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("ROUNDEDCORNERS", [0, 0, 4, 4]),
+    ]))
+
+    elements.append(card_header)
+    elements.append(card_body)
+    return elements
+
+
+def _section_parameters(styles: dict, rec: Recomendacao, page_w: float) -> list:
+    elements = []
+    elements.append(Paragraph("2. Optimized Parameters", styles["section_title"]))
+
+    if not rec.parametros:
+        elements.append(Paragraph("No parameters available for this scenario.", styles["body"]))
+        return elements
+
+    p = rec.parametros
+
+    rows: list[list] = [
+        [
+            Paragraph("Parameter", styles["table_header"]),
+            Paragraph("Value (%)", styles["table_header"]),
+            Paragraph("Value (R$)", styles["table_header"]),
+        ]
+    ]
+
+    def row(label: str, pct: Optional[str], brl: Optional[str]) -> list:
+        return [
+            Paragraph(label, styles["table_cell_bold"]),
+            Paragraph(pct or "—", styles["table_cell"]),
+            Paragraph(brl or "—", styles["table_cell"]),
+        ]
+
+    rows.append(row(
+        "Minimum decrement",
+        _fmt_pct(p.decremento_min_pct),
+        _fmt_brl(p.decremento_min_brl),
+    ))
+    rows.append(row(
+        "Opening price (vs. best proposal)",
+        _fmt_pct(p.preco_abertura_pct),
+        _fmt_brl(p.preco_abertura_brl),
+    ))
+    rows.append(row(
+        "Auction duration",
+        f"{p.duracao_minutos} min",
+        "—",
+    ))
+
+    if p.prorrogacao_minutos:
+        rows.append(row(
+            f"Auto-extension (if bid in last {p.prorrogacao_trigger_minutos} min)",
+            f"+{p.prorrogacao_minutos} min",
+            "—",
+        ))
+
+    if p.visibilidade:
+        rows.append([
+            Paragraph("Thermometer visibility", styles["table_cell_bold"]),
+            Paragraph(p.visibilidade, styles["table_cell"]),
+            Paragraph("—", styles["table_cell"]),
+        ])
+
+    if p.rodadas_estimadas:
+        rows.append(row(
+            f"Estimated rounds ({p.intervalo_rodada_minutos} min each)",
+            f"~{p.rodadas_estimadas} rounds",
+            "—",
+        ))
+
+    if p.incremento_holandes_pct:
+        rows.append(row(
+            "Dutch increment per tick",
+            _fmt_pct(p.incremento_holandes_pct),
+            _fmt_brl(p.incremento_holandes_brl),
+        ))
+
+    col_w = [page_w * 0.48, page_w * 0.26, page_w * 0.26]
+    table = Table(rows, colWidths=col_w, repeatRows=1)
+    table.setStyle(TableStyle([
+        # Header
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("TOPPADDING", (0, 0), (-1, 0), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 7),
+        # Data rows
+        ("BACKGROUND", (0, 1), (-1, -1), WHITE),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, GRAY_LIGHT]),
+        ("TOPPADDING", (0, 1), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        # Borders
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+
+    elements.append(table)
+    return elements
+
+
+def _section_saving(styles: dict, rec: Recomendacao, page_w: float) -> list:
+    elements = []
+    elements.append(Paragraph("3. Saving Estimate", styles["section_title"]))
+
+    if not rec.saving:
+        elements.append(Paragraph("No saving estimate available for this scenario.", styles["body"]))
+        return elements
+
+    s = rec.saving
+    col_w = page_w / 3
+
+    # Cores das colunas
+    pct_colors = [
+        (RED, RED_BG),
+        (TEAL, colors.HexColor("#E6F5F5")),
+        (GREEN, GREEN_BG),
+    ]
+    labels    = ["Pessimistic", "Realistic",    "Optimistic"]
+    pct_vals  = [s.pessimista_pct, s.realista_pct, s.otimista_pct]
+    brl_vals  = [s.pessimista_brl, s.realista_brl, s.otimista_brl]
+
+    # Cabeçalho
+    header_row = [
+        [Paragraph(label, styles["saving_label"])]
+        for label in labels
+    ]
+
+    # Linha de %
+    pct_row = []
+    for pct, (fg, _) in zip(pct_vals, pct_colors):
+        style = ParagraphStyle(
+            "sp_pct", parent=styles["saving_pct"], textColor=fg
+        )
+        pct_row.append([Paragraph(f"{pct:.1f}%", style)])
+
+    # Linha de R$
+    brl_row = [
+        [Paragraph(_fmt_brl(brl), styles["saving_brl"])]
+        for brl in brl_vals
+    ]
+
+    # Montar como 3 sub-tabelas lado a lado
+    cells = []
+    for i, (label, pct, brl, (fg, bg)) in enumerate(
+        zip(labels, pct_vals, brl_vals, pct_colors)
+    ):
+        label_p = Paragraph(label, styles["saving_label"])
+        pct_style = ParagraphStyle("spp", parent=styles["saving_pct"], textColor=fg)
+        pct_p  = Paragraph(f"{pct:.1f}%", pct_style)
+        brl_p  = Paragraph(_fmt_brl(brl), styles["saving_brl"])
+        inner = Table(
+            [[label_p], [pct_p], [brl_p]],
+            colWidths=[col_w - 8],
+        )
+        inner.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), bg),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ]))
+        cells.append(inner)
+
+    saving_table = Table(
+        [cells],
+        colWidths=[col_w, col_w, col_w],
+    )
+    saving_table.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+
+    note_p = Paragraph(
+        "Estimates based on auction theory benchmarks and historical procurement data. "
+        "Actual saving depends on market conditions and supplier behavior.",
+        styles["body"],
+    )
+
+    elements.append(saving_table)
+    elements.append(_sp(0.2))
+    elements.append(note_p)
+    return elements
+
+
+def _section_simulation(
+    styles: dict,
+    sim: SimulacaoResult,
+    page_w: float,
+) -> list:
+    elements = []
+    elements.append(Paragraph("4. Supplier Behavior Simulation", styles["section_title"]))
+
+    if sim.formato == FormatoLeilao.NAO_LEILAO:
+        elements.append(Paragraph(sim.narrativa, styles["body"]))
+        return elements
+
+    # Distribuição de arquétipos
+    contagem: dict[str, int] = {}
+    for f in sim.fornecedores:
+        contagem[f.arquetipo.value] = contagem.get(f.arquetipo.value, 0) + 1
+    dist_str = "  |  ".join(f"{v}× {k}" for k, v in contagem.items())
+    elements.append(Paragraph(f"Supplier field: {dist_str}", styles["body"]))
+    elements.append(_sp(0.15))
+
+    # Narrativa determinística
+    for line in sim.narrativa.split("\n\n"):
+        if line.strip():
+            elements.append(Paragraph(line.strip(), styles["body"]))
+
+    # Vencedor e preço final
+    if sim.vencedor_provavel and sim.preco_final_estimado_pct is not None:
+        result_p = Paragraph(
+            f"<b>Projected outcome:</b> {sim.vencedor_provavel.nome} wins at "
+            f"{sim.preco_final_estimado_pct:+.1f}% vs. best proposal received "
+            f"(saving: {abs(sim.preco_final_estimado_pct):.1f}%).",
+            styles["body"],
+        )
+        elements.append(result_p)
+
+    return elements
+
+
+def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float) -> list:
+    elements = []
+
+    if not sim.alertas:
+        return elements
+
+    elements.append(Paragraph("5. Risk Alerts", styles["section_title"]))
+
+    sev_style = {
+        "Alta":  ("alert_high", "[HIGH]  "),
+        "Média": ("alert_mid",  "[MED]   "),
+        "Baixa": ("alert_low",  "[LOW]   "),
+    }
+    sev_bg = {
+        "Alta":  RED_BG,
+        "Média": AMBER_BG,
+        "Baixa": colors.HexColor("#F0FDF4"),
+    }
+    sev_border = {
+        "Alta":  RED,
+        "Média": AMBER,
+        "Baixa": GREEN,
+    }
+
+    for alerta in sorted(sim.alertas, key=lambda a: {"Alta": 0, "Média": 1, "Baixa": 2}[a.severidade]):
+        style_key, prefix = sev_style.get(alerta.severidade, ("body", ""))
+        text = f"<b>{alerta.tipo.value}</b> — {alerta.descricao}"
+        alert_cell = Table(
+            [[Paragraph(text, styles[style_key])]],
+            colWidths=[page_w - 4],
+        )
+        alert_cell.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), sev_bg[alerta.severidade]),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LINEAFTER", (0, 0), (0, -1), 3, sev_border[alerta.severidade]),
+        ]))
+        elements.append(alert_cell)
+        elements.append(_sp(0.1))
+
+    return elements
+
+
+def _section_references(styles: dict, rec: Recomendacao, page_w: float) -> list:
+    elements = []
+    elements.append(Paragraph("6. Theoretical References", styles["section_title"]))
+
+    if not rec.referencias:
+        return elements
+
+    rows: list[list] = [[
+        Paragraph("Book", styles["table_header"]),
+        Paragraph("Author", styles["table_header"]),
+        Paragraph("Applied Concept", styles["table_header"]),
+    ]]
+
+    for ref in rec.referencias:
+        rows.append([
+            Paragraph(f"<i>{ref.livro}</i>", styles["table_cell"]),
+            Paragraph(ref.autor, styles["table_cell"]),
+            Paragraph(ref.aplicacao, styles["table_cell"]),
+        ])
+
+    col_w = [page_w * 0.28, page_w * 0.22, page_w * 0.50]
+    table = Table(rows, colWidths=col_w, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("TOPPADDING", (0, 0), (-1, 0), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 7),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [WHITE, GRAY_LIGHT]),
+        ("TOPPADDING", (0, 1), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D1D5DB")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+
+    elements.append(table)
+    return elements
+
+
+def _section_suppliers(styles: dict, inp: InputLeilao, page_w: float) -> list:
+    """Tabela de fornecedores com proposta, interesse e comportamento."""
+    elements: list = []
+    elements.append(Paragraph("7. Supplier Profiles", styles["section_title"]))
+    elements.append(_sp(0.2))
+
+    _BEHAV_EN = {
+        "Competitivo": "Competitive",
+        "Moderado":    "Moderate",
+        "Conservador": "Conservative",
+    }
+    _INT_EN = {
+        "Alto":  "High",
+        "Médio": "Medium",
+        "Baixo": "Low",
+    }
+
+    header = ["Supplier", "Proposal (BRL)", "Strategic Interest", "Behavior"]
+    rows = [header]
+    for forn in inp.fornecedores:
+        proposta = f"R$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
+        rows.append([
+            forn.nome,
+            proposta,
+            _INT_EN.get(forn.interesse_estrategico.value, forn.interesse_estrategico.value),
+            _BEHAV_EN.get(forn.comportamento.value, forn.comportamento.value),
+        ])
+
+    col_w = [page_w * 0.30, page_w * 0.25, page_w * 0.23, page_w * 0.22]
+    tbl = Table(rows, colWidths=col_w)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",   (0, 0), (-1, 0), NAVY),
+        ("TEXTCOLOR",    (0, 0), (-1, 0), colors.white),
+        ("FONTNAME",     (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE",     (0, 0), (-1, 0), 8),
+        ("FONTSIZE",     (0, 1), (-1, -1), 8),
+        ("FONTNAME",     (0, 1), (-1, -1), "Helvetica"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT_BLUE]),
+        ("GRID",         (0, 0), (-1, -1), 0.3, colors.HexColor("#CCCCCC")),
+        ("ALIGN",        (1, 0), (1, -1), "RIGHT"),
+        ("ALIGN",        (2, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING",   (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+        ("LEFTPADDING",  (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(tbl)
+    elements.append(_sp(0.3))
+    return elements
+
+
+def _section_footer(styles: dict) -> list:
+    elements = [
+        _sp(0.4),
+        HRFlowable(width="100%", thickness=0.5, color=GRAY_MID,
+                   spaceAfter=6, spaceBefore=0),
+        Paragraph(
+            "Generated by BidWise — github.com/HenriqueAPSilva/bidwise",
+            styles["footer"],
+        ),
+        _sp(0.1),
+        Paragraph(
+            "This report is a recommendation tool. "
+            "Final auction configuration decisions remain with the procurement professional.",
+            styles["disclaimer"],
+        ),
+    ]
+    return elements
+
+
+# ──────────────────────────────────────────────────────────────────────
+# FUNÇÃO PRINCIPAL
+# ──────────────────────────────────────────────────────────────────────
+
+def gerar_pdf(
+    inp: InputLeilao,
+    rec: Recomendacao,
+    sim: SimulacaoResult,
+) -> bytes:
+    """
+    Gera o relatório PDF completo e retorna os bytes.
+    Não salva em disco — usar com st.download_button.
+    """
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=1.8 * cm,
+        rightMargin=1.8 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+        title="BidWise — Reverse Auction Strategy Report",
+        author="BidWise",
+    )
+
+    page_w = A4[0] - 3.6 * cm  # largura útil
+    styles = _build_styles()
+
+    story: list = []
+
+    story.extend(_section_header(styles, page_w))
+    story.append(_sp(0.3))
+
+    story.extend(_section_scenario_summary(styles, inp, page_w))
+    story.append(_sp(0.4))
+
+    story.extend(_section_recommendation_card(styles, rec, page_w))
+    story.append(_sp(0.4))
+
+    story.extend(_section_parameters(styles, rec, page_w))
+    story.append(_sp(0.4))
+
+    story.extend(_section_saving(styles, rec, page_w))
+    story.append(_sp(0.4))
+
+    story.extend(_section_simulation(styles, sim, page_w))
+    story.append(_sp(0.3))
+
+    story.extend(_section_alerts(styles, sim, page_w))
+
+    story.extend(_section_references(styles, rec, page_w))
+
+    story.extend(_section_suppliers(styles, inp, page_w))
+
+    story.extend(_section_footer(styles))
+
+    doc.build(story)
+    return buffer.getvalue()
+
+
+# ──────────────────────────────────────────────────────────────────────
+# TESTE
+# ──────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    from motor import (
+        Comportamento,
+        Fornecedor,
+        NivelTripartido,
+        QuadranteKraljic,
+        recomendar,
+    )
+    from simulador import simular
+
+    inp = InputLeilao(
+        fornecedores=[
+            Fornecedor("Alpha",   500_000.00, NivelTripartido.ALTO,  Comportamento.COMPETITIVO),
+            Fornecedor("Beta",    520_000.00, NivelTripartido.ALTO,  Comportamento.COMPETITIVO),
+            Fornecedor("Gamma",   555_000.00, NivelTripartido.ALTO,  Comportamento.COMPETITIVO),
+            Fornecedor("Delta",   580_000.00, NivelTripartido.MEDIO, Comportamento.COMPETITIVO),
+            Fornecedor("Epsilon", 610_000.00, NivelTripartido.ALTO,  Comportamento.MODERADO),
+            Fornecedor("Zeta",    625_000.00, NivelTripartido.ALTO,  Comportamento.COMPETITIVO),
+        ],
+        kraljic=QuadranteKraljic.ALAVANCA,
+        comoditizacao=NivelTripartido.ALTO,
+        urgencia=NivelTripartido.MEDIO,
+    )
+
+    rec = recomendar(inp)
+    sim = simular(inp, rec)
+
+    pdf_bytes = gerar_pdf(inp, rec, sim)
+
+    output_path = "bidwise_test_report.pdf"
+    with open(output_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    print(f"PDF generated: {output_path}  ({len(pdf_bytes):,} bytes)")
