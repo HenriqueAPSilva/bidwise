@@ -270,7 +270,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab_main, tab_about = st.tabs([t("tab_advisor", lang), t("tab_about", lang)])
+tab_main, tab_guide, tab_about = st.tabs([t("tab_advisor", lang), t("tab_guide", lang), t("tab_about", lang)])
+
+# ══════════════════════════════════════════════════════════════════════
+# GUIDE TAB
+# ══════════════════════════════════════════════════════════════════════
+
+with tab_guide:
+    _guide_file = "supplier_guide_pt.md" if lang == "pt" else "supplier_guide.md"
+    try:
+        with open(_guide_file, encoding="utf-8") as _f:
+            st.markdown(_f.read())
+    except FileNotFoundError:
+        with open("supplier_guide.md", encoding="utf-8") as _f:
+            st.markdown(_f.read())
 
 # ══════════════════════════════════════════════════════════════════════
 # ABOUT TAB
@@ -720,7 +733,9 @@ with tab_main:
             key=lambda a: {"Alta": 0, "Média": 1, "Baixa": 2}[a.severidade],
         ):
             msg = f"**{alerta.tipo.value}** — {alerta.descricao}"
-            if alerta.severidade == "Alta":
+            if alerta.tipo.value == "Low auction ROI":
+                st.info(msg, icon="💡")
+            elif alerta.severidade == "Alta":
                 st.error(msg, icon="🚨")
             elif alerta.severidade == "Média":
                 st.warning(msg, icon="⚠️")

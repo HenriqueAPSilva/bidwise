@@ -85,10 +85,16 @@ Quer construir algo parecido? Comece com um problema real no seu domínio, codif
 |Livro|Autor|Conceito aplicado|
 |-|-|-|
 |Auction Theory|Vijay Krishna|Seleção de formato, equivalência de receita, valores privados vs. comuns|
-|Thinking Strategically|Dixit & Nalebuff|Equilíbrios de Nash, comportamento estratégico, jogos sequenciais|
+|The Theory of Auctions|Paul Klemperer|Valor de entrada, conluio em leilões ascendentes, redução de sinais|
+|Thinking Strategically|Dixit & Nalebuff|Equilíbrios de Nash, backward induction, jogos sequenciais|
+|Game Theory for Applied Economists|Robert Gibbons|Equilíbrio de Nash Bayesiano, jogos com informação incompleta|
 |Negotiation Genius|Malhotra & Bazerman|Ancoragem, efeitos do preço de abertura, estratégia de prorrogação|
 |The Psychology of Price|Leigh Caldwell|Efeitos psicológicos do ranking/termômetro nas decisões|
-|Competitive Procurement Strategy|David Muir|Quando leilão é o mecanismo certo vs. RFQ vs. negociação direta|
+|Misbehaving|Richard H. Thaler|Aversão à perda, contabilidade mental, maldição do vencedor|
+|Strategic Sourcing and Category Management|Magnus Carlsson|Matriz Kraljic e estratégias por categoria|
+|eSourcing Capability Model|Sourcing Industry Group|Maturidade processual em sourcing, decisões auditáveis|
+
+Algumas funcionalidades do BidWise — como a calibração do decremento baseada nos gaps entre propostas adjacentes, caps dinâmicos por valor do contrato e duração adaptativa — são heurísticas práticas desenvolvidas a partir de experiência real em sourcing, não derivadas de teoria formal. Acreditamos em transparência: onde o motor usa teoria, citamos. Onde usa heurísticas operacionais, rotulamos como tal.
 
 ### Criado por
 

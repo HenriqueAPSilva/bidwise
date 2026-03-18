@@ -14,6 +14,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "Your scenarios exist only in your active session"
         ),
         "tab_advisor": "Auction Advisor",
+        "tab_guide": "How to Model Suppliers",
         "tab_about": "About BidWise",
         "sidebar_title": "Configure your auction",
         "num_suppliers": "Number of qualified suppliers",
@@ -212,6 +213,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "Seus cenários existem apenas na sessão ativa"
         ),
         "tab_advisor": "Consultor de Leilão",
+        "tab_guide": "Como Modelar Fornecedores",
         "tab_about": "Sobre o BidWise",
         "sidebar_title": "Configure seu leilão",
         "num_suppliers": "Número de fornecedores qualificados",

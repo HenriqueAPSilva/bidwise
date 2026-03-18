@@ -56,6 +56,7 @@ class TipoAlerta(str, Enum):
     CAMPO_FRACO         = "Weak supplier field"
     ACEITE_RAPIDO       = "Early acceptance risk (Dutch)"
     ELIMINACAO_RAPIDA   = "Rapid elimination forecast"
+    BAIXO_ROI           = "Low auction ROI"
 
 
 @dataclass
@@ -1072,6 +1073,27 @@ def simular(inp: InputLeilao, rec: Recomendacao, lang: str = "en") -> SimulacaoR
 
     # Gerar alertas
     alertas = _gerar_alertas(inp, fornecedores, eventos, formato, lang=lang)
+
+    # ROI mínimo: saving realista < $5k em compra < $50k
+    _mp = inp.melhor_proposta_brl
+    _saving_real_brl = (
+        round(_mp * rec.saving.realista_pct / 100, 2)
+        if (rec.saving and _mp)
+        else None
+    )
+    if _mp and _mp < 50_000 and _saving_real_brl is not None and _saving_real_brl < 5_000:
+        _roi_desc = (
+            "Saving realista esperado abaixo de $5.000. O custo operacional de conduzir "
+            "um leilão formal pode superar o benefício. Considere RFQ simplificado ou negociação direta."
+            if lang == "pt" else
+            "Expected realistic saving is below $5,000. The operational cost of running "
+            "a formal auction may exceed the benefit. Consider a simplified RFQ or direct negotiation."
+        )
+        alertas.append(AlertaSimulacao(
+            tipo=TipoAlerta.BAIXO_ROI,
+            descricao=_roi_desc,
+            severidade="Média",
+        ))
 
     # Gerar narrativa determinística (uses canonical price)
     narrativa = _gerar_narrativa(

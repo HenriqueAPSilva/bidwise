@@ -85,10 +85,16 @@ Want to build something similar? Start with a real problem in your domain, codif
 |Book|Author|Applied concept|
 |-|-|-|
 |Auction Theory|Vijay Krishna|Format selection, revenue equivalence, private vs common values|
-|Thinking Strategically|Dixit \& Nalebuff|Nash equilibria, strategic behavior, sequential games|
+|The Theory of Auctions|Paul Klemperer|Entry value, collusion in ascending auctions, signal reduction|
+|Thinking Strategically|Dixit \& Nalebuff|Nash equilibria, backward induction, sequential games|
+|Game Theory for Applied Economists|Robert Gibbons|Bayesian-Nash equilibrium, incomplete information games|
 |Negotiation Genius|Malhotra \& Bazerman|Anchoring, opening price effects, extension strategy|
 |The Psychology of Price|Leigh Caldwell|Ranking/thermometer psychological effects on decisions|
-|Competitive Procurement Strategy|David Muir|When auction is right mechanism vs RFQ vs direct negotiation|
+|Misbehaving|Richard H. Thaler|Loss aversion, mental accounting, winner's curse|
+|Strategic Sourcing and Category Management|Magnus Carlsson|Kraljic matrix and category strategies|
+|eSourcing Capability Model|Sourcing Industry Group|Structured sourcing process maturity, auditable decisions|
+
+Some of BidWise's features — such as decrement calibration based on adjacent proposal gaps, dynamic caps by contract value, and adaptive duration — are practical heuristics developed from real-world sourcing experience, not derived from formal theory. We believe in transparency: where the engine uses theory, we cite it. Where it uses operational heuristics, we label them as such.
 
 ### Built by
 

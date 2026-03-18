@@ -244,6 +244,18 @@ def detectar_nao_leilao(inp: InputLeilao, lang: str = "en") -> Optional[AlertaNa
             "Only one qualified supplier — no competition is possible."
         )
 
+    # Strategic + low commoditization + high spread → asymmetric market, price-only auction ignores TCO
+    if (inp.kraljic == QuadranteKraljic.ESTRATEGICO
+            and inp.comoditizacao == NivelTripartido.BAIXO
+            and inp.dispersao_precos > 50):
+        motivos.append(
+            "Item Estratégico com baixa comoditização e dispersão de preços acima de 50% — "
+            "mercado assimétrico onde um leilão de preço puro ignora TCO e custo de migração."
+            if _is_pt else
+            "Strategic item with low commoditization and price spread above 50% — "
+            "asymmetric market where a price-only auction ignores TCO and switching costs."
+        )
+
     # Strategic item with mega contract value — relationship risk outweighs price savings
     if (inp.kraljic == QuadranteKraljic.ESTRATEGICO
             and inp.melhor_proposta_brl is not None
@@ -614,6 +626,7 @@ def calcular_decremento(
     propostas: list[float],
     comportamento: Comportamento,
     melhor_proposta: Optional[float] = None,
+    kraljic: Optional[QuadranteKraljic] = None,
 ) -> float:
     """
     Calcula o decremento mínimo ideal (%) baseado nos gaps reais entre propostas.
@@ -668,6 +681,11 @@ def calcular_decremento(
         Comportamento.MODERADO:    1.0,
         Comportamento.CONSERVADOR: 0.8,
     }[comportamento]
+
+    # Reduzir decremento em itens estratégicos/gargalo — decremento alto assusta fornecedores críticos
+    if kraljic in (QuadranteKraljic.ESTRATEGICO, QuadranteKraljic.GARGALO):
+        ajuste *= 0.7
+
     decremento_ajustado = decremento_base * ajuste
 
     # g) Aplicar floor e cap após ajuste
@@ -1039,24 +1057,57 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
 
     refs: list[ReferenciaTeórica] = []
 
-    if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
+    if formato == FormatoLeilao.INGLES_COMPLETO:
         refs.append(ReferenciaTeórica(
             livro="Auction Theory",
             autor="Vijay Krishna",
-            conceito="English auction with independent private values",
+            conceito="Entry value and ascending auctions",
             aplicacao=(
-                "English Reverse allows suppliers to reveal information gradually, "
-                "leading to greater saving extraction when private values are heterogeneous."
+                "More participants in an English auction increases expected saving — "
+                "each additional qualified supplier shifts the winner's curse and "
+                "drives bids closer to private cost."
+            ),
+        ))
+        refs.append(ReferenciaTeórica(
+            livro="Misbehaving",
+            autor="Richard H. Thaler",
+            conceito="Loss aversion and mental accounting",
+            aplicacao=(
+                "The thermometer amplifies loss aversion — suppliers who lose ranking "
+                "position feel the loss more intensely than the equivalent gain, "
+                "driving more aggressive rebidding."
             ),
         ))
         refs.append(ReferenciaTeórica(
             livro="The Psychology of Price",
             autor="Leigh Caldwell",
-            conceito="Psychological effect of ranking and thermometer",
+            conceito="Psychological framing of decrement steps",
             aplicacao=(
-                "Ranking visibility creates social pressure and perceived urgency. "
-                "The thermometer amplifies this effect by giving each supplier "
-                "a continuous measure of their 'distance from the leader'."
+                "Decrement size frames each bid as a discrete loss decision. "
+                "Smaller decrements encourage more frequent bids; larger ones "
+                "reduce participation from weaker suppliers."
+            ),
+        ))
+
+    elif formato == FormatoLeilao.INGLES_REDUZIDO:
+        refs.append(ReferenciaTeórica(
+            livro="The Theory of Auctions",
+            autor="Paul Klemperer",
+            conceito="Reducing signals to hinder tacit coordination",
+            aplicacao=(
+                "Removing the thermometer reduces the information each supplier "
+                "has about competitors, making it harder to coordinate tacitly "
+                "on a minimum winning bid."
+            ),
+        ))
+        refs.append(ReferenciaTeórica(
+            livro="The Psychology of Price",
+            autor="Leigh Caldwell",
+            conceito="Ranking visibility and competitive pressure",
+            aplicacao=(
+                "Ranking alone preserves competitive pressure without revealing "
+                "the exact gap — suppliers know if they are winning or losing "
+                "but not by how much."
             ),
         ))
 
@@ -1068,8 +1119,18 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
             aplicacao=(
                 "Dutch Reverse is strategically equivalent to a sealed bid — "
                 "each supplier decides independently without observing competitors. "
-                "In practice, full opacity reduces tacit coordination and is "
-                "preferred when the active field is small."
+                "Full opacity reduces tacit coordination and is preferred when "
+                "the active field is small."
+            ),
+        ))
+        refs.append(ReferenciaTeórica(
+            livro="Game Theory for Applied Economists",
+            autor="Robert Gibbons",
+            conceito="Bayesian-Nash equilibrium in incomplete information games",
+            aplicacao=(
+                "Each supplier's acceptance decision in Dutch Reverse is a "
+                "Bayesian-Nash strategy: they accept when the called price reaches "
+                "their private cost threshold, with no information about others."
             ),
         ))
         refs.append(ReferenciaTeórica(
@@ -1085,41 +1146,48 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
 
     elif formato == FormatoLeilao.JAPONES:
         refs.append(ReferenciaTeórica(
-            livro="Auction Theory",
-            autor="Vijay Krishna",
-            conceito="Clock auctions and progressive elimination",
+            livro="Thinking Strategically",
+            autor="Avinash Dixit & Barry Nalebuff",
+            conceito="Backward induction in sequential games",
             aplicacao=(
-                "Japanese Reverse with active elimination resolves the free-riding problem — "
-                "suppliers who do not act are eliminated, forcing continuous "
-                "revelation of preferences."
+                "Round-by-round elimination creates a sequential game solvable by "
+                "backward induction — suppliers anticipate future rounds and decide "
+                "optimal exit timing. Higher-cost suppliers exit first."
             ),
         ))
         refs.append(ReferenciaTeórica(
-            livro="Thinking Strategically",
-            autor="Avinash Dixit & Barry Nalebuff",
-            conceito="Nash equilibrium in sequential games",
+            livro="Game Theory for Applied Economists",
+            autor="Robert Gibbons",
+            conceito="Bayesian updating across rounds",
             aplicacao=(
-                "Round-by-round elimination creates a sequential game where "
-                "each decision to stay or exit reveals information. "
-                "Higher-cost suppliers exit first and the equilibrium "
-                "resolves naturally."
+                "Each elimination event is a public signal — remaining suppliers "
+                "update their beliefs about the field's cost distribution, "
+                "affecting their own willingness to stay."
             ),
         ))
 
     elif formato == FormatoLeilao.NAO_LEILAO:
         refs.append(ReferenciaTeórica(
-            livro="Competitive Procurement Strategy",
-            autor="David Muir",
-            conceito="Procurement mechanism selection",
+            livro="Strategic Sourcing and Category Management",
+            autor="Magnus Carlsson",
+            conceito="Kraljic matrix and category strategies",
             aplicacao=(
-                "Not every purchase benefits from a reverse auction. "
-                "When the supply market is concentrated or the item is strategic, "
-                "open price competition may damage the relationship "
-                "without generating additional saving."
+                "Strategic and Bottleneck items require differentiated mechanisms — "
+                "open price competition exposes critical supplier relationships "
+                "to risk without proportional benefit."
+            ),
+        ))
+        refs.append(ReferenciaTeórica(
+            livro="eSourcing Capability Model",
+            autor="Sourcing Industry Group",
+            conceito="Structured sourcing process maturity",
+            aplicacao=(
+                "An auditable decision framework — documenting why an auction "
+                "was not used is as important as documenting why one was."
             ),
         ))
 
-    # Cross-format reference
+    # Cross-format references (always included)
     refs.append(ReferenciaTeórica(
         livro="Negotiation Genius",
         autor="Deepak Malhotra & Max Bazerman",
@@ -1128,6 +1196,16 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
             "Automatic extension in the final minutes captures last-minute bids "
             "(sniping), extracting additional saving that would be lost "
             "with a fixed closing time."
+        ),
+    ))
+    refs.append(ReferenciaTeórica(
+        livro="Misbehaving",
+        autor="Richard H. Thaler",
+        conceito="Winner's curse and mental accounting",
+        aplicacao=(
+            "Buyers should account for winner's curse in saving projections — "
+            "the winning supplier may have bid below a sustainable floor, "
+            "creating delivery or quality risk."
         ),
     ))
 
@@ -1179,7 +1257,8 @@ def recomendar(inp: InputLeilao, lang: str = "en") -> Recomendacao:
 
     # 3) Calcular parâmetros
     decremento_pct = calcular_decremento(
-        inp._propostas, inp.comportamento_predominante, inp.melhor_proposta_brl
+        inp._propostas, inp.comportamento_predominante, inp.melhor_proposta_brl,
+        kraljic=inp.kraljic,
     )
     decremento_brl = (
         round(inp.melhor_proposta_brl * decremento_pct / 100, 2)
@@ -1342,6 +1421,8 @@ def _gerar_justificativa(
             "the supplier field is large enough to generate real dynamic competition. "
             "The thermometer amplifies psychological pressure — each supplier feels "
             "the 'temperature' of the competition and tends to bid more aggressively. "
+            "The thermometer amplifies loss aversion (Thaler) — suppliers who lose ranking "
+            "position feel the loss more intensely than the equivalent gain, driving more aggressive rebidding. "
             "The auto-extension rule ensures saving is extracted down to the last possible bid."
         )
 
