@@ -447,6 +447,7 @@ with tab_main:
         st.session_state.last_inp = inp
         st.session_state.last_rec = rec
         st.session_state.last_sim = sim
+        st.session_state.last_lang = lang
 
     # Gate: show prompt if no analysis yet
     if "last_rec" not in st.session_state:
@@ -461,6 +462,9 @@ with tab_main:
         st.warning(t("spread_warning_extreme", lang))
     elif inp.dispersao_precos > 50:
         st.warning(t("spread_warning", lang))
+
+    if inp.kraljic == QuadranteKraljic.GARGALO and inp.num_fornecedores >= 6:
+        st.info(t("bottleneck_large_field", lang))
 
     # ──────────────────────────────────────────────────────────────────
     # 1. RECOMMENDATION CARD

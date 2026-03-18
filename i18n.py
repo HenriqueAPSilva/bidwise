@@ -74,6 +74,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "saving_flat_warning": (
             "⚠️ All scenarios converge to the same estimate. This typically indicates a narrow price spread or low competitive pressure among suppliers."
         ),
+        "bottleneck_large_field": (
+            "ℹ️ Bottleneck classification is unusual with this many qualified suppliers. Consider re-evaluating the Kraljic classification for this item."
+        ),
         "suggested_mechanism": "Suggested mechanism:",
         "optimized_params": "Optimized Parameters",
         "min_decrement": "Min. Decrement",
@@ -268,6 +271,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "saving_flat_warning": (
             "⚠️ Todos os cenários convergem para a mesma estimativa. Isso normalmente indica uma dispersão de preços estreita ou baixa pressão competitiva entre os fornecedores."
+        ),
+        "bottleneck_large_field": (
+            "ℹ️ A classificação Gargalo é incomum com tantos fornecedores qualificados. Considere reavaliar a classificação Kraljic deste item."
         ),
         "suggested_mechanism": "Mecanismo sugerido:",
         "optimized_params": "Parâmetros Otimizados",

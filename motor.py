@@ -106,7 +106,7 @@ class InputLeilao:
           nos dados limpos. Fallback para fórmula clássica se < 2 restarem.
         Returns 10.0 if < 2 proposals.
         """
-        ps = self._propostas
+        ps = [p for p in self._propostas if p > 0]
         if len(ps) < 2:
             return 10.0
         sorted_ps = sorted(ps)
@@ -242,6 +242,18 @@ def detectar_nao_leilao(inp: InputLeilao, lang: str = "en") -> Optional[AlertaNa
             "Apenas um fornecedor qualificado — não há possibilidade de competição."
             if _is_pt else
             "Only one qualified supplier — no competition is possible."
+        )
+
+    # Strategic item with mega contract value — relationship risk outweighs price savings
+    if (inp.kraljic == QuadranteKraljic.ESTRATEGICO
+            and inp.melhor_proposta_brl is not None
+            and inp.melhor_proposta_brl > 500_000_000):
+        motivos.append(
+            "Item Estratégico com valor acima de $500M — o risco ao relacionamento "
+            "estratégico e a complexidade de aprovação superam o benefício de um leilão reverso."
+            if _is_pt else
+            "Strategic item with contract value above $500M — relationship risk "
+            "and approval complexity outweigh the benefit of a reverse auction."
         )
 
     # Strategic or Bottleneck with irreplaceable supplier
@@ -493,6 +505,12 @@ def _score_holandes(inp: InputLeilao) -> float:
         NivelTripartido.BAIXO: 12,
     }[inp.interesse_predominante]
 
+    # Conservador + Alto interesse: fornecedor quer o contrato mas não aceita pressão pública
+    # Opacidade total do Holandês é ideal — encerra no primeiro aceite sem exposição
+    if (inp.comportamento_predominante == Comportamento.CONSERVADOR
+            and inp.interesse_predominante == NivelTripartido.ALTO):
+        score += 15
+
     return score
 
 
@@ -555,6 +573,25 @@ def _score_japones(inp: InputLeilao) -> float:
         if inp.melhor_proposta_brl < 40_000:
             score -= 20
 
+    # Conservador + Alto interesse penaliza Japonês — eliminação progressiva em rodadas
+    # públicas é o pior ambiente para fornecedores que querem opacidade
+    if (inp.comportamento_predominante == Comportamento.CONSERVADOR
+            and inp.interesse_predominante == NivelTripartido.ALTO):
+        score -= 15
+
+    # Penalidade por gap entre líder e segundo colocado — líder com vantagem natural grande
+    # torna o Japonês arriscado: buyer pode pagar mais que a melhor proposta equalizada.
+    # No Inglês com Best Response, o líder já entra ganhando e a pressão vai aos concorrentes.
+    _props_validas = sorted(
+        f.proposta_brl for f in inp.fornecedores if f.proposta_brl and f.proposta_brl > 0
+    )
+    if len(_props_validas) >= 2:
+        _gap_lider = (_props_validas[1] - _props_validas[0]) / _props_validas[0] * 100
+        if _gap_lider > 50:
+            score -= 35
+        elif _gap_lider > 30:
+            score -= 20
+
     return score
 
 
@@ -612,7 +649,7 @@ def calcular_decremento(
         floor_pct, cap_pct = 0.1, 3.0
 
     # b-d) Gap-based base
-    valid = sorted(p for p in propostas if p and p > 0)
+    valid = sorted(p for p in propostas if p is not None and p > 0)
     if len(valid) < 2:
         decremento_base = 1.0  # fallback neutro
     else:
@@ -625,17 +662,18 @@ def calcular_decremento(
                        else (gaps[n // 2 - 1] + gaps[n // 2]) / 2)
         decremento_base = gap_mediano * 0.4
 
-    # f) Aplicar floor e cap
-    decremento = max(floor_pct, min(cap_pct, decremento_base))
-
-    # g) Ajuste por comportamento
+    # f) Ajuste por comportamento (antes do cap — o cap é o limite final)
     ajuste = {
         Comportamento.COMPETITIVO: 1.1,
         Comportamento.MODERADO:    1.0,
         Comportamento.CONSERVADOR: 0.8,
     }[comportamento]
+    decremento_ajustado = decremento_base * ajuste
 
-    return round(decremento * ajuste, 2)
+    # g) Aplicar floor e cap após ajuste
+    decremento = max(floor_pct, min(cap_pct, decremento_ajustado))
+
+    return round(decremento, 2)
 
 
 def calcular_preco_abertura(
@@ -973,6 +1011,10 @@ def estimar_saving(
     pessimista = _snap(pessimista, decremento)
     realista   = _snap(realista,   decremento)
     otimista   = _snap(otimista,   decremento)
+
+    # Prevent inversions after snap — do NOT force separation if equal
+    realista = max(realista, pessimista)
+    otimista = max(otimista, realista)
 
     # Valores em $
     mp = inp.melhor_proposta_brl
