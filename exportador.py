@@ -833,12 +833,12 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     _C_CIRCLE  = "#5DADE2"
     _C_DIAMOND = "#2ECC71"
     _C_BOX     = "#5DADE2"
-    _C_ANNOT   = "white"   if dark else "#374151"
-    _C_TITLE   = "white"   if dark else "#0D2137"
-    _C_LABELS  = "white"   if dark else "#374151"
+    _C_ANNOT   = "#333333"
+    _C_TITLE   = "#333333"
+    _C_LABELS  = "#333333"
     _C_GRID    = "#4A4A6A" if dark else "#F3F4F6"
     _C_SPINE   = "#555577" if dark else "#E5E7EB"
-    _C_LEG     = "white"   if dark else "#6B7280"
+    _C_LEG     = "#333333"
 
     n = len(with_data)
     fig, ax = plt.subplots(figsize=(max(7, n * 1.6), 5))
@@ -923,8 +923,8 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     ]
     ax.legend(
         handles=leg_handles,
-        loc='lower center', bbox_to_anchor=(0.5, -0.30 if not rotate else -0.42),
-        ncol=3, fontsize=8.5, framealpha=0, labelcolor=_C_LEG,
+        loc='lower right',
+        ncol=1, fontsize=8.5, framealpha=0.5, labelcolor=_C_LEG,
     )
     fig.text(0.98, 0.02, "BidWise", ha='right', va='bottom',
              fontsize=7, color='#9CA3AF', style='italic')
