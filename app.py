@@ -57,6 +57,13 @@ lang: str = "pt" if _lang_raw == "PT-BR" else "en"
 
 st.markdown("""<style>
 [data-testid="stSidebar"] {min-width: 420px; max-width: 420px;}
+[data-testid="collapsedControl"] {
+    position: fixed !important;
+    top: 0.5rem !important;
+    left: 0.5rem !important;
+    z-index: 999999 !important;
+    display: block !important;
+}
 </style>""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────
