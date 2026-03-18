@@ -71,6 +71,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "spread_warning_extreme": (
             "⚠️ Price spread exceeds 100%. This strongly suggests an outlier proposal or inconsistent equalization. Review data before proceeding."
         ),
+        "saving_flat_warning": (
+            "⚠️ All scenarios converge to the same estimate. This typically indicates a narrow price spread or low competitive pressure among suppliers."
+        ),
         "suggested_mechanism": "Suggested mechanism:",
         "optimized_params": "Optimized Parameters",
         "min_decrement": "Min. Decrement",
@@ -146,7 +149,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "no_references": "No references available for this scenario.",
         "sidebar_no_analysis_tip": "👇 Fill in your scenario below and click **Analyze** to generate your report.",
         "about_from_sidebar": "ℹ️ About BidWise",
-        "mobile_tip": "📱 On mobile, tap the **>** arrow at the top left to edit your scenario.",
+        "mobile_tip": "📱 On mobile, tap the **<** arrow at the top left to edit your scenario.",
         "mobile_edit_tip": "To edit your scenario, tap the arrow (›) at the top left corner",
         "footer_text": "Built by <b>Henrique Silva</b> — Strategic Sourcing Analyst",
         "github_link": "github.com/HenriqueAPSilva/bidwise",
@@ -263,6 +266,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "spread_warning_extreme": (
             "⚠️ Dispersão de preços acima de 100%. Isso indica fortemente uma proposta fora do padrão ou equalização inconsistente. Revise os dados antes de prosseguir."
         ),
+        "saving_flat_warning": (
+            "⚠️ Todos os cenários convergem para a mesma estimativa. Isso normalmente indica uma dispersão de preços estreita ou baixa pressão competitiva entre os fornecedores."
+        ),
         "suggested_mechanism": "Mecanismo sugerido:",
         "optimized_params": "Parâmetros Otimizados",
         "min_decrement": "Decremento Mín.",
@@ -338,7 +344,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "no_references": "Nenhuma referência disponível para este cenário.",
         "sidebar_no_analysis_tip": "👇 Preencha seu cenário abaixo e clique em **Analisar** para gerar o relatório.",
         "about_from_sidebar": "ℹ️ Sobre o BidWise",
-        "mobile_tip": "📱 No celular, toque na seta **>** no canto superior esquerdo para editar o cenário.",
+        "mobile_tip": "📱 No celular, toque na seta **<** no canto superior esquerdo para editar o cenário.",
         "mobile_edit_tip": "Para editar seu cenário, toque na seta (›) no canto superior esquerdo",
         "footer_text": "Criado por <b>Henrique Silva</b> — Analista de Suprimentos Estratégico",
         "github_link": "github.com/HenriqueAPSilva/bidwise",

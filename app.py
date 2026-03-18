@@ -509,8 +509,9 @@ with tab_main:
             st.metric(t("min_decrement", lang), f"{p.decremento_min_pct:.2f}%", delta=brl_str)
         with c2:
             ap_brl_str = f"$ {_eff_abertura_brl:,.0f}" if _eff_abertura_brl else None
-            if p.preco_abertura_descricao:
-                ap_pct_str = p.preco_abertura_descricao
+            _abertura_desc = getattr(p, "preco_abertura_descricao", None)
+            if _abertura_desc:
+                ap_pct_str = _abertura_desc
             elif _eff_abertura_pct is not None:
                 ap_pct_str = f"{_eff_abertura_pct:+.1f}%"
             else:
@@ -533,7 +534,7 @@ with tab_main:
                 enabled_str = ("Ativado" if lang == "pt" else "Enabled") if _is_enabled else ("Desativado" if lang == "pt" else "Disabled")
                 st.metric(t("thermometer", lang), enabled_str)
 
-        if p.preco_abertura_descricao:
+        if getattr(p, "preco_abertura_descricao", None):
             _opening_val = p.preco_abertura_descricao
             _opening_brl = t("best_response_note", lang) if _is_english else _fmt_brl(_eff_abertura_brl)
         elif _eff_abertura_pct is not None:
@@ -597,6 +598,9 @@ with tab_main:
         with sc3:
             st.metric(t("optimistic", lang), f"{s.otimista_pct:.1f}%",
                       delta=_fmt_brl(s.otimista_brl) if s.otimista_brl else None)
+
+        if s.pessimista_pct == s.realista_pct == s.otimista_pct and s.pessimista_pct > 0:
+            st.caption(t("saving_flat_warning", lang))
 
         if inp.melhor_proposta_brl:
             best = inp.melhor_proposta_brl

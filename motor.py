@@ -98,11 +98,35 @@ class InputLeilao:
 
     @property
     def dispersao_precos(self) -> float:
-        """% spread: (max - min) / min * 100. Returns 10.0 if < 2 proposals."""
+        """
+        % spread robusto a outliers.
+        - < 4 propostas: (max − min) / min × 100  (fórmula clássica)
+        - ≥ 4 propostas: exclui outliers pelos fences de Tukey
+          (fence = p75 ± 1,5 × IQR), depois aplica (max − min) / min
+          nos dados limpos. Fallback para fórmula clássica se < 2 restarem.
+        Returns 10.0 if < 2 proposals.
+        """
         ps = self._propostas
         if len(ps) < 2:
             return 10.0
-        return round((max(ps) - min(ps)) / min(ps) * 100, 1)
+        sorted_ps = sorted(ps)
+        if len(sorted_ps) < 4:
+            return round((sorted_ps[-1] - sorted_ps[0]) / sorted_ps[0] * 100, 1)
+
+        def _perc(data: list[float], p: float) -> float:
+            idx = (len(data) - 1) * p
+            lo, hi = int(idx), min(int(idx) + 1, len(data) - 1)
+            return data[lo] + (data[hi] - data[lo]) * (idx - lo)
+
+        p25 = _perc(sorted_ps, 0.25)
+        p75 = _perc(sorted_ps, 0.75)
+        iqr = p75 - p25
+        lo_fence = p25 - 1.5 * iqr
+        hi_fence = p75 + 1.5 * iqr
+        clean = [p for p in sorted_ps if lo_fence <= p <= hi_fence]
+        if len(clean) < 2:
+            clean = sorted_ps  # fallback: todos os dados
+        return round((clean[-1] - clean[0]) / clean[0] * 100, 1)
 
     @property
     def melhor_proposta_brl(self) -> Optional[float]:
@@ -522,13 +546,13 @@ def _score_japones(inp: InputLeilao) -> float:
 
     # Penalidade por valor do contrato — rodadas de Japonês exigem aprovação interna
     if inp.melhor_proposta_brl is not None:
-        if inp.melhor_proposta_brl > 10_000_000:
+        if inp.melhor_proposta_brl > 20_000_000:
             score -= 25  # Comittee-level approval per round — Japonês impractical
-        elif inp.melhor_proposta_brl > 2_000_000:
+        elif inp.melhor_proposta_brl > 4_000_000:
             score -= 15  # Internal approval per round limits round velocity
 
         # Micro purchases — format overhead outweighs value
-        if inp.melhor_proposta_brl < 20_000:
+        if inp.melhor_proposta_brl < 40_000:
             score -= 20
 
     return score
@@ -560,8 +584,8 @@ def calcular_decremento(
     Lógica:
     a) < 2 propostas → fallback neutro de 1.0%
     b) Ordena propostas; calcula gap % entre cada par adjacente
-    c) gap_medio = média dos gaps
-    d) decremento_base = gap_medio × 0.4
+    c) gap_mediano = mediana dos gaps (robusto a outliers)
+    d) decremento_base = gap_mediano × 0.4
     e) Cap e floor por valor do leilão (melhor proposta):
        - < $200k:   floor 0.5%, cap 14%
        - $200k–$2M: floor 0.3%, cap 10%
@@ -592,12 +616,14 @@ def calcular_decremento(
     if len(valid) < 2:
         decremento_base = 1.0  # fallback neutro
     else:
-        gaps = [
+        gaps = sorted([
             (valid[i + 1] - valid[i]) / valid[i] * 100
             for i in range(len(valid) - 1)
-        ]
-        gap_medio = sum(gaps) / len(gaps)
-        decremento_base = gap_medio * 0.4
+        ])
+        n = len(gaps)
+        gap_mediano = (gaps[n // 2] if n % 2 == 1
+                       else (gaps[n // 2 - 1] + gaps[n // 2]) / 2)
+        decremento_base = gap_mediano * 0.4
 
     # f) Aplicar floor e cap
     decremento = max(floor_pct, min(cap_pct, decremento_base))
@@ -947,11 +973,6 @@ def estimar_saving(
     pessimista = _snap(pessimista, decremento)
     realista   = _snap(realista,   decremento)
     otimista   = _snap(otimista,   decremento)
-
-    # Preserve ordering after snap (snapping can collapse pessimista == realista == otimista)
-    # Ensure pessimista <= realista <= otimista
-    realista = max(realista, pessimista)
-    otimista = max(otimista, realista)
 
     # Valores em $
     mp = inp.melhor_proposta_brl

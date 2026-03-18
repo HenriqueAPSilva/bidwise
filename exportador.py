@@ -483,7 +483,7 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
     ))
     rows.append(row(
         _t("opening_price_param", lang),
-        p.preco_abertura_descricao if p.preco_abertura_descricao else _fmt_pct(p.preco_abertura_pct),
+        getattr(p, "preco_abertura_descricao", None) or _fmt_pct(p.preco_abertura_pct),
         _fmt_brl(p.preco_abertura_brl),
     ))
     rows.append(row(
