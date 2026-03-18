@@ -39,15 +39,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ──────────────────────────────────────────────────────────────────────
-# SIDEBAR VISIBILITY — inject before any rendering
-# ──────────────────────────────────────────────────────────────────────
-
-if st.session_state.get("sidebar_hidden", False):
-    st.markdown(
-        '<style>[data-testid="stSidebar"] {display: none;}</style>',
-        unsafe_allow_html=True,
-    )
+for _legacy_key in ("sidebar_hidden", "sidebar_collapsed", "show_about"):
+    st.session_state.pop(_legacy_key, None)
 
 # ──────────────────────────────────────────────────────────────────────
 # LANGUAGE SELECTION — must happen before any t() calls
@@ -64,24 +57,6 @@ lang: str = "pt" if _lang_raw == "PT-BR" else "en"
 
 st.markdown("""<style>
 [data-testid="stSidebar"] {min-width: 420px; max-width: 420px;}
-@media (max-width: 1080px) {
-    [data-testid="stSidebar"] {
-        min-width: 100vw !important;
-        max-width: 100vw !important;
-        width: 100vw !important;
-        z-index: 999;
-        position: fixed;
-        left: 0;
-        top: 0;
-    }
-    [data-testid="stSidebar"][aria-expanded="false"] {
-        display: none !important;
-    }
-    section[data-testid="stMain"] {
-        margin-left: 0 !important;
-        width: 100vw !important;
-    }
-}
 </style>""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────
@@ -295,17 +270,6 @@ st.markdown(
 
 tab_main, tab_about = st.tabs([t("tab_advisor", lang), t("tab_about", lang)])
 
-if st.session_state.pop("show_about", False):
-    st.markdown(
-        """<script>
-        (function() {
-            const tabs = window.parent.document.querySelectorAll('button[role="tab"]');
-            if (tabs.length >= 2) tabs[1].click();
-        })();
-        </script>""",
-        unsafe_allow_html=True,
-    )
-
 # ══════════════════════════════════════════════════════════════════════
 # ABOUT TAB
 # ══════════════════════════════════════════════════════════════════════
@@ -324,14 +288,6 @@ with tab_about:
 # ══════════════════════════════════════════════════════════════════════
 
 with tab_main:
-
-    # ── Return button — always visible when sidebar is hidden ─────────
-    if st.session_state.get("sidebar_hidden", False) or st.session_state.get("sidebar_collapsed", False):
-        if st.button(t("configure_scenario", lang), use_container_width=True, key="show_sidebar_again"):
-            st.session_state["sidebar_hidden"] = False
-            st.session_state["sidebar_collapsed"] = False
-            st.session_state["show_about"] = False
-            st.rerun()
 
     # ──────────────────────────────────────────────────────────────────
     # HEADER
@@ -358,16 +314,9 @@ with tab_main:
     # ──────────────────────────────────────────────────────────────────
 
     with st.sidebar:
-        if "last_rec" in st.session_state:
-            if st.button(t("view_report", lang), use_container_width=True, key="view_report_top"):
-                st.session_state["sidebar_hidden"] = True
-                st.rerun()
-        else:
+        if "last_rec" not in st.session_state:
             st.info(t("sidebar_no_analysis_tip", lang))
-            if st.button(t("about_from_sidebar", lang), use_container_width=True, key="about_from_sidebar"):
-                st.session_state["sidebar_hidden"] = True
-                st.session_state["show_about"] = True
-                st.rerun()
+        st.caption(t("mobile_tip", lang))
 
         st.markdown(f"### {t('sidebar_title', lang)}")
 
@@ -454,16 +403,11 @@ with tab_main:
         if len(_props_entered) < 2:
             st.info(t("tip_min_proposals", lang))
 
-        analyze = st.button(t("analyze", lang), type="primary", use_container_width=True)
-        if st.button(t("reset", lang), type="secondary", use_container_width=True):
+        analyze = st.button(t("analyze", lang), type="primary", width="stretch")
+        if st.button(t("reset", lang), type="secondary", width="stretch"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
-
-        if "last_rec" in st.session_state:
-            if st.button(t("view_report", lang), use_container_width=True, key="view_report_bottom"):
-                st.session_state["sidebar_hidden"] = True
-                st.rerun()
 
     # ──────────────────────────────────────────────────────────────────
     # SESSION STATE INIT
@@ -510,6 +454,8 @@ with tab_main:
     inp = st.session_state.last_inp
     rec = st.session_state.last_rec
     sim = st.session_state.last_sim
+
+    st.info(t("mobile_tip", lang))
 
     if inp.dispersao_precos > 50:
         st.warning(t("spread_warning", lang))
@@ -740,7 +686,7 @@ with tab_main:
                 file_name="bidwise_report.pdf",
                 mime="application/pdf",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
             )
 
         # Specific disclaimer
