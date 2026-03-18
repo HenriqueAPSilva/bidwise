@@ -144,6 +144,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "sidebar_no_analysis_tip": "👇 Fill in your scenario below and click **Analyze** to generate your report.",
         "about_from_sidebar": "ℹ️ About BidWise",
         "mobile_tip": "📱 On mobile, tap the **>** arrow at the top left to edit your scenario.",
+        "mobile_edit_tip": "To edit your scenario, tap the arrow (›) at the top left corner",
         "footer_text": "Built by <b>Henrique Silva</b> — Strategic Sourcing Analyst",
         "github_link": "github.com/HenriqueAPSilva/bidwise",
         # PDF labels
@@ -332,6 +333,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "sidebar_no_analysis_tip": "👇 Preencha seu cenário abaixo e clique em **Analisar** para gerar o relatório.",
         "about_from_sidebar": "ℹ️ Sobre o BidWise",
         "mobile_tip": "📱 No celular, toque na seta **>** no canto superior esquerdo para editar o cenário.",
+        "mobile_edit_tip": "Para editar seu cenário, toque na seta (›) no canto superior esquerdo",
         "footer_text": "Criado por <b>Henrique Silva</b> — Analista de Suprimentos Estratégico",
         "github_link": "github.com/HenriqueAPSilva/bidwise",
         # PDF labels

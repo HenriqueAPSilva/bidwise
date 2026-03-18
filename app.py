@@ -455,7 +455,12 @@ with tab_main:
     rec = st.session_state.last_rec
     sim = st.session_state.last_sim
 
-    st.info(t("mobile_tip", lang))
+    st.markdown(
+        '<div style="background-color:#2d2d44;color:#F0E68C;padding:10px 16px;'
+        'text-align:center;font-size:14px;border-radius:4px;margin-bottom:12px;">⚙️ '
+        + t("mobile_edit_tip", lang) + '</div>',
+        unsafe_allow_html=True,
+    )
 
     if inp.dispersao_precos > 50:
         st.warning(t("spread_warning", lang))
