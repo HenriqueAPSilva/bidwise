@@ -54,7 +54,6 @@ Python · Streamlit · Claude API (Anthropic) · ReportLab · Pandas
 git clone https://github.com/HenriqueAPSilva/bidwise.git
 cd bidwise
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY="your-key"
 streamlit run app.py
 ```
 
