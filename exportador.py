@@ -483,7 +483,7 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
     ))
     rows.append(row(
         _t("opening_price_param", lang),
-        _fmt_pct(p.preco_abertura_pct),
+        p.preco_abertura_descricao if p.preco_abertura_descricao else _fmt_pct(p.preco_abertura_pct),
         _fmt_brl(p.preco_abertura_brl),
     ))
     rows.append(row(
@@ -887,10 +887,7 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
             va='top' if _above else 'bottom',
         )
 
-    xlabels = [
-        f"{a['nome']} ({_INITIAL.get(a['arquetipo'], '?')})"
-        for a in with_data
-    ]
+    xlabels = [a['nome'] for a in with_data]
     rotate = n > 4
     ax.set_xticks(range(n))
     ax.set_xticklabels(

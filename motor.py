@@ -148,6 +148,7 @@ class ParametrosOtimizados:
     intervalo_rodada_minutos: Optional[int]  # Japonês
     incremento_holandes_pct: Optional[float]  # Holandês: quanto o preço sobe por tick
     incremento_holandes_brl: Optional[float]
+    preco_abertura_descricao: Optional[str] = None  # Human-readable label replaces raw %
 
 
 @dataclass
@@ -255,6 +256,22 @@ def detectar_nao_leilao(inp: InputLeilao, lang: str = "en") -> Optional[AlertaNa
             "(no supplier submits a bid)."
         )
 
+    # Bottleneck + conservative + low interest = near-certain desert auction regardless of field size
+    if (
+        inp.kraljic == QuadranteKraljic.GARGALO
+        and inp.comportamento_predominante == Comportamento.CONSERVADOR
+        and inp.interesse_predominante == NivelTripartido.BAIXO
+    ):
+        motivos.append(
+            "Item de Gargalo com fornecedores predominantemente conservadores e baixo interesse — "
+            "risco elevado de leilão deserto independente do número de participantes. "
+            "Fornecedores de Gargalo raramente aceitam pressão pública de preço."
+            if _is_pt else
+            "Bottleneck item with predominantly conservative suppliers and low strategic interest — "
+            "high risk of a desert auction regardless of field size. "
+            "Bottleneck suppliers rarely accept public price pressure."
+        )
+
     # Low commoditization + few suppliers = restrictive specification
     if (
         inp.comoditizacao == NivelTripartido.BAIXO
@@ -323,7 +340,9 @@ def _score_ingles_completo(inp: InputLeilao) -> float:
     score = 0.0
 
     # Número de fornecedores
-    if inp.num_fornecedores >= 5:
+    if inp.num_fornecedores >= 8:
+        score += 35  # Large competitive field — English Full's ideal territory
+    elif inp.num_fornecedores >= 5:
         score += 25
     elif inp.num_fornecedores == 4:
         score += 20
@@ -479,9 +498,9 @@ def _score_japones(inp: InputLeilao) -> float:
         NivelTripartido.BAIXO: -10,
     }[inp.comoditizacao]
 
-    # Comportamento predominante
+    # Comportamento predominante — homogeneamente competitivo é melhor no Inglês Full
     score += {
-        Comportamento.COMPETITIVO: 12,
+        Comportamento.COMPETITIVO: 7,   # -5 vs before: uniform aggression favors English Full
         Comportamento.MODERADO: 18,
         Comportamento.CONSERVADOR: -5,
     }[inp.comportamento_predominante]
@@ -500,6 +519,17 @@ def _score_japones(inp: InputLeilao) -> float:
         NivelTripartido.MEDIO: 8,
         NivelTripartido.BAIXO: -5,
     }[inp.interesse_predominante]
+
+    # Penalidade por valor do contrato — rodadas de Japonês exigem aprovação interna
+    if inp.melhor_proposta_brl is not None:
+        if inp.melhor_proposta_brl > 10_000_000:
+            score -= 25  # Comittee-level approval per round — Japonês impractical
+        elif inp.melhor_proposta_brl > 2_000_000:
+            score -= 15  # Internal approval per round limits round velocity
+
+        # Micro purchases — format overhead outweighs value
+        if inp.melhor_proposta_brl < 20_000:
+            score -= 20
 
     return score
 
@@ -798,7 +828,7 @@ def determinar_visibilidade(
 
     if num_fornecedores <= 2:
         return (
-            "Termômetro: Desativado (campo pequeno — não agrega valor)"
+            "Termômetro: Desativado (grupo pequeno — não agrega valor)"
             if _is_pt else
             "Thermometer: Disabled (small field — adds no value)"
         )
@@ -820,12 +850,12 @@ def determinar_visibilidade(
     # Moderate behavior
     if num_fornecedores >= 4:
         return (
-            "Termômetro: Ativado (campo grande o suficiente para diluir risco de gaming)"
+            "Termômetro: Ativado (grupo grande o suficiente para diluir risco de gaming)"
             if _is_pt else
             "Thermometer: Enabled (field large enough to dilute gaming risk)"
         )
     return (
-        "Termômetro: Desativado (campo pequeno reduz valor de calibração)"
+        "Termômetro: Desativado (grupo pequeno reduz valor de calibração)"
         if _is_pt else
         "Thermometer: Disabled (small field reduces calibration value)"
     )
@@ -1145,6 +1175,20 @@ def recomendar(inp: InputLeilao, lang: str = "en") -> Recomendacao:
         intervalo_rodada = intervalo_rodada_calc
         rodadas = duracao // intervalo_rodada if intervalo_rodada > 0 else calcular_rodadas_japones(inp.dispersao_precos, decremento_pct)
 
+    # Human-readable opening price description
+    _is_pt = lang == "pt"
+    if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
+        _abertura_desc: Optional[str] = "Melhor Resposta" if _is_pt else "Best Response"
+    elif formato == FormatoLeilao.HOLANDES:
+        _abertura_desc = "Piso definido pelo comprador" if _is_pt else "Buyer-defined floor"
+    elif formato == FormatoLeilao.JAPONES:
+        if inp.comoditizacao == NivelTripartido.ALTO:
+            _abertura_desc = "Teto: melhor proposta" if _is_pt else "Ceiling: best proposal"
+        else:
+            _abertura_desc = "Teto: pior proposta" if _is_pt else "Ceiling: worst proposal"
+    else:
+        _abertura_desc = None
+
     parametros = ParametrosOtimizados(
         decremento_min_pct=decremento_pct,
         decremento_min_brl=decremento_brl,
@@ -1158,6 +1202,7 @@ def recomendar(inp: InputLeilao, lang: str = "en") -> Recomendacao:
         intervalo_rodada_minutos=intervalo_rodada,
         incremento_holandes_pct=inc_pct,
         incremento_holandes_brl=inc_brl,
+        preco_abertura_descricao=_abertura_desc,
     )
 
     # 4) Estimativa de saving
@@ -1224,7 +1269,7 @@ def _gerar_justificativa(
 
     if formato == FormatoLeilao.INGLES_COMPLETO:
         partes.append(
-            "O English Reverse com ranking e termômetro é recomendado porque o campo de "
+            "O Leilão Reverso Inglês com ranking e termômetro é recomendado porque o grupo de "
             "fornecedores é grande o suficiente para gerar competição dinâmica real. "
             "O termômetro amplifica a pressão psicológica — cada fornecedor sente a "
             "'temperatura' da competição e tende a licitar de forma mais agressiva. "
@@ -1239,7 +1284,7 @@ def _gerar_justificativa(
 
     elif formato == FormatoLeilao.INGLES_REDUZIDO:
         partes.append(
-            "O English Reverse somente com ranking (sem termômetro) é recomendado porque, "
+            "O Leilão Reverso Inglês somente com ranking (sem termômetro) é recomendado porque, "
             "embora a competição seja suficiente, o cenário apresenta risco moderado de que "
             "os fornecedores usem o termômetro para calibrar o mínimo exato necessário para vencer. "
             "Remover o termômetro preserva a pressão competitiva do ranking "
@@ -1254,7 +1299,7 @@ def _gerar_justificativa(
 
     elif formato == FormatoLeilao.HOLANDES:
         partes.append(
-            "O Dutch Reverse é recomendado porque o cenário apresenta poucos participantes "
+            "O Leilão Reverso Holandês é recomendado porque o cenário apresenta poucos participantes "
             "e/ou alto risco de conluio. No Dutch, cada fornecedor decide de forma completamente "
             "independente — é o formato de maior opacidade disponível no Coupa, "
             "funcionando na prática como um lance selado. O comprador controla o ritmo "
@@ -1270,7 +1315,7 @@ def _gerar_justificativa(
     elif formato == FormatoLeilao.JAPONES:
         if _is_pt:
             partes.append(
-                "O Japanese Reverse é recomendado porque o campo de fornecedores é grande "
+                "O Leilão Reverso Japonês é recomendado porque o grupo de fornecedores é grande "
                 "e o item é altamente comoditizado. A eliminação progressiva resolve o "
                 "problema de passividade — fornecedores que não aceitam ativamente cada rodada são "
                 f"eliminados. Com ~{parametros.rodadas_estimadas} rodadas estimadas, o formato "
@@ -1292,7 +1337,7 @@ def _gerar_justificativa(
     if _is_pt:
         _runner_reason_pt = {
             FormatoLeilao.INGLES_COMPLETO: "também viável, mas o termômetro aumenta o risco de calibração com este perfil de fornecedores",
-            FormatoLeilao.INGLES_REDUZIDO: "também viável, mas sem a pressão de eliminação que melhor se adapta a este tamanho de campo",
+            FormatoLeilao.INGLES_REDUZIDO: "também viável, mas sem a pressão de eliminação que melhor se adapta a este tamanho de grupo",
             FormatoLeilao.HOLANDES: "também viável, mas perde a vantagem de descoberta de preço progressiva necessária aqui",
             FormatoLeilao.JAPONES: "também viável, mas leva mais rodadas para convergir e pode exceder o tempo disponível",
         }

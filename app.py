@@ -70,7 +70,7 @@ _KRALJIC_ENUM: dict[str, QuadranteKraljic] = {
     "Bottleneck":   QuadranteKraljic.GARGALO,
     "Non-critical": QuadranteKraljic.NAO_CRITICO,
     # PT-BR keys
-    "Alavanca":     QuadranteKraljic.ALAVANCA,
+    "Alavancagem":  QuadranteKraljic.ALAVANCA,
     "Estratégico":  QuadranteKraljic.ESTRATEGICO,
     "Gargalo":      QuadranteKraljic.GARGALO,
     "Não crítico":  QuadranteKraljic.NAO_CRITICO,
@@ -130,11 +130,11 @@ FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
 }
 
 FORMAT_LABEL_PT: dict[FormatoLeilao, str] = {
-    FormatoLeilao.INGLES_COMPLETO: "English Reverse — Ranking + Termômetro",
-    FormatoLeilao.INGLES_REDUZIDO: "English Reverse — Apenas Ranking",
-    FormatoLeilao.HOLANDES:        "Dutch Reverse",
-    FormatoLeilao.JAPONES:         "Japanese Reverse",
-    FormatoLeilao.NAO_LEILAO:      "Não Fazer Leilão",
+    FormatoLeilao.INGLES_COMPLETO: "Leilão Reverso Inglês — Ranking + Termômetro",
+    FormatoLeilao.INGLES_REDUZIDO: "Leilão Reverso Inglês — Apenas Ranking",
+    FormatoLeilao.HOLANDES:        "Leilão Reverso Holandês",
+    FormatoLeilao.JAPONES:         "Leilão Reverso Japonês",
+    FormatoLeilao.NAO_LEILAO:      "Não Realizar Leilão",
 }
 
 MECH_LABEL_EN: dict[str, str] = {
@@ -167,10 +167,10 @@ def _fmt_brl(value: float | None) -> str:
     return f"$ {value:,.2f}"
 
 
-def _build_copy_prompt(inp: InputLeilao, rec, sim) -> str:
+def _build_copy_prompt(inp: InputLeilao, rec, sim, lang: str = "en") -> str:
     """Generate a structured prompt the user can paste into any AI assistant."""
     _KRALJIC_EN = {
-        "Alavanca": "Leverage", "Estratégico": "Strategic",
+        "Alavancagem": "Leverage", "Estratégico": "Strategic",
         "Gargalo": "Bottleneck", "Não crítico": "Non-critical",
     }
     _NIVEL_EN = {"Alto": "High", "Médio": "Medium", "Baixo": "Low"}
@@ -241,6 +241,8 @@ def _build_copy_prompt(inp: InputLeilao, rec, sim) -> str:
         "3) Key risk factors and mitigation strategies the buyer should prepare for.",
         "4) Suggestions for post-auction negotiation to lock in the saving.",
     ]
+    if lang == "pt":
+        lines += ["", "Por favor, responda em português."]
     return "\n".join(lines)
 
 
@@ -455,14 +457,9 @@ with tab_main:
     rec = st.session_state.last_rec
     sim = st.session_state.last_sim
 
-    st.markdown(
-        '<div style="background-color:#2d2d44;color:#F0E68C;padding:10px 16px;'
-        'text-align:center;font-size:14px;border-radius:4px;margin-bottom:12px;">⚙️ '
-        + t("mobile_edit_tip", lang) + '</div>',
-        unsafe_allow_html=True,
-    )
-
-    if inp.dispersao_precos > 50:
+    if inp.dispersao_precos > 100:
+        st.warning(t("spread_warning_extreme", lang))
+    elif inp.dispersao_precos > 50:
         st.warning(t("spread_warning", lang))
 
     # ──────────────────────────────────────────────────────────────────
@@ -494,55 +491,9 @@ with tab_main:
 
     st.markdown("---")
 
-    # ──────────────────────────────────────────────────────────────────
-    # 1b. OPENING PRICE OVERRIDE
-    # ──────────────────────────────────────────────────────────────────
-
-    # Compute effective opening price (read-only override, rec is not mutated)
     _eff_abertura_pct: float | None = rec.parametros.preco_abertura_pct if rec.parametros else None
     _eff_abertura_brl: float | None = rec.parametros.preco_abertura_brl if rec.parametros else None
-
     _is_english = fmt in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO)
-
-    if rec.parametros and fmt != FormatoLeilao.NAO_LEILAO and not _is_english:
-        _bidwise_pct = rec.parametros.preco_abertura_pct
-        _op_suggestion = t("opening_suggestion", lang).format(pct=_bidwise_pct)
-        _op_options = [
-            _op_suggestion,
-            t("opening_equalization", lang),
-            t("opening_custom", lang),
-        ]
-        _op_strategy = st.radio(
-            t("opening_strategy", lang),
-            options=_op_options,
-            index=0,
-            horizontal=True,
-        )
-
-        _is_ceiling = _op_strategy == t("opening_equalization", lang)
-        _is_custom = _op_strategy == t("opening_custom", lang)
-
-        if _is_ceiling:
-            if inp.melhor_proposta_brl is not None:
-                _eff_abertura_pct = 0.0
-                _eff_abertura_brl = inp.melhor_proposta_brl
-            else:
-                st.warning(t("opening_ceiling_warning", lang), icon="⚠️")
-        elif _is_custom:
-            _custom_pct = st.slider(
-                t("opening_custom_label", lang),
-                min_value=-20,
-                max_value=10,
-                value=int(_bidwise_pct) if _bidwise_pct else -5,
-                step=1,
-            )
-            _eff_abertura_pct = float(_custom_pct)
-            if inp.melhor_proposta_brl is not None:
-                _eff_abertura_brl = round(
-                    inp.melhor_proposta_brl * (1 + _custom_pct / 100), 2
-                )
-
-        st.markdown("---")
 
     # ──────────────────────────────────────────────────────────────────
     # 2. OPTIMIZED PARAMETERS
@@ -558,8 +509,8 @@ with tab_main:
             st.metric(t("min_decrement", lang), f"{p.decremento_min_pct:.2f}%", delta=brl_str)
         with c2:
             ap_brl_str = f"$ {_eff_abertura_brl:,.0f}" if _eff_abertura_brl else None
-            if _is_english:
-                ap_pct_str = t("best_response", lang)
+            if p.preco_abertura_descricao:
+                ap_pct_str = p.preco_abertura_descricao
             elif _eff_abertura_pct is not None:
                 ap_pct_str = f"{_eff_abertura_pct:+.1f}%"
             else:
@@ -582,12 +533,15 @@ with tab_main:
                 enabled_str = ("Ativado" if lang == "pt" else "Enabled") if _is_enabled else ("Desativado" if lang == "pt" else "Disabled")
                 st.metric(t("thermometer", lang), enabled_str)
 
-        if _is_english:
-            _opening_val = t("best_response", lang)
-            _opening_brl = t("best_response_note", lang)
-        else:
-            _opening_val = f"{_eff_abertura_pct:+.1f}%" if _eff_abertura_pct is not None else "—"
+        if p.preco_abertura_descricao:
+            _opening_val = p.preco_abertura_descricao
+            _opening_brl = t("best_response_note", lang) if _is_english else _fmt_brl(_eff_abertura_brl)
+        elif _eff_abertura_pct is not None:
+            _opening_val = f"{_eff_abertura_pct:+.1f}%"
             _opening_brl = _fmt_brl(_eff_abertura_brl)
+        else:
+            _opening_val = "—"
+            _opening_brl = "—"
 
         rows = [
             (t("min_decrement_param", lang), f"{p.decremento_min_pct:.2f}%", _fmt_brl(p.decremento_min_brl)),
@@ -845,7 +799,7 @@ with tab_main:
 
     st.divider()
     with st.expander(t("take_to_ai", lang)):
-        prompt_text = _build_copy_prompt(inp, rec, sim)
+        prompt_text = _build_copy_prompt(inp, rec, sim, lang=lang)
         st.code(prompt_text, language=None)
         st.caption(t("copy_prompt_hint", lang))
 

@@ -68,6 +68,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "spread_warning": (
             "⚠️ Price spread exceeds 50%. Consider reviewing equalization data for outliers."
         ),
+        "spread_warning_extreme": (
+            "⚠️ Price spread exceeds 100%. This strongly suggests an outlier proposal or inconsistent equalization. Review data before proceeding."
+        ),
         "suggested_mechanism": "Suggested mechanism:",
         "optimized_params": "Optimized Parameters",
         "min_decrement": "Min. Decrement",
@@ -212,7 +215,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "kraljic": "Quadrante Kraljic",
         "kraljic_help": (
             "Posição do item na matriz Kraljic. "
-            "Itens de Alavanca (alto gasto, muitos fornecedores) são os melhores candidatos para leilão. "
+            "Itens de Alavancagem (alto gasto, muitos fornecedores) são os melhores candidatos para leilão. "
             "Itens Estratégicos têm risco de continuidade de fornecimento — licitar com cautela. "
             "Itens de Gargalo têm poucos substitutos e respondem mal à pressão de preço. "
             "Itens Não críticos têm baixa relevância estratégica."
@@ -256,6 +259,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         ),
         "spread_warning": (
             "⚠️ Dispersão de preços acima de 50%. Revise os dados da rodada de equalização."
+        ),
+        "spread_warning_extreme": (
+            "⚠️ Dispersão de preços acima de 100%. Isso indica fortemente uma proposta fora do padrão ou equalização inconsistente. Revise os dados antes de prosseguir."
         ),
         "suggested_mechanism": "Mecanismo sugerido:",
         "optimized_params": "Parâmetros Otimizados",
@@ -361,7 +367,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "O saving real depende das condições de mercado e do comportamento dos fornecedores."
         ),
         "pdf_section_simulation": "4. Simulação de Comportamento dos Fornecedores",
-        "pdf_supplier_field": "Campo de fornecedores: {dist}",
+        "pdf_supplier_field": "Grupo de fornecedores: {dist}",
         "pdf_projected_outcome": (
             "<b>Resultado projetado:</b> {winner} vence a {pct:+.1f}% vs. melhor proposta "
             "recebida (saving: {saving:.1f}%)."
@@ -398,7 +404,7 @@ KRALJIC_OPTIONS: dict[str, list[str]] = {
         "Non-critical — Low impact, low risk",
     ],
     "pt": [
-        "Alavanca — Alto impacto, baixo risco",
+        "Alavancagem — Alto impacto, baixo risco",
         "Estratégico — Alto impacto, alto risco",
         "Gargalo — Baixo impacto, alto risco",
         "Não crítico — Baixo impacto, baixo risco",

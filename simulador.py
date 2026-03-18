@@ -522,8 +522,8 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.CAMPO_FRACO,
             descricao=(
-                f"Campo efetivo de apenas {n_ativos} fornecedores ativos. "
-                "Competição limitada — considere o Dutch Reverse para cenários "
+                f"Grupo efetivo de apenas {n_ativos} fornecedores ativos. "
+                "Competição limitada — considere o Leilão Reverso Holandês para cenários "
                 "com poucos participantes reais."
                 if _is_pt else
                 f"Effective field of only {n_ativos} active suppliers. "
@@ -538,7 +538,7 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.SINAL_CONLUIO,
             descricao=(
-                "Campo ativo pequeno com comportamento não competitivo e termômetro ativado. "
+                "Grupo ativo pequeno com comportamento não competitivo e termômetro ativado. "
                 "Os fornecedores podem usar o sinal de proximidade para coordenação tácita "
                 "e convergir para o mínimo absoluto sem competição real."
                 if _is_pt else

@@ -2,7 +2,7 @@
 
 ### Por que criei isso
 
-Sou Henrique Silva, profissional de compras com mais de 7 anos em suprimentos estratégicos. Conduzi mais de 90 leilões reversos e acredito genuinamente no potencial desta ferramenta.
+Sou Henrique Silva, profissional de compras com mais de 7 anos em suprimentos estratégicos. Conduzi leilões reversos ao longo da minha carreira e acredito genuinamente no potencial desta ferramenta.
 
 Todo leilão reverso começa com a mesma pergunta: qual formato devo usar e como configurá-lo? Não existe ferramenta para isso — é pura experiência e intuição. O BidWise codifica essa decisão em um motor transparente e auditável, baseado na teoria dos leilões.
 
@@ -11,22 +11,22 @@ Todo leilão reverso começa com a mesma pergunta: qual formato devo usar e como
 O BidWise avalia quatro formatos de leilão e recomenda aquele que maximiza o saving esperado. Veja como funciona em detalhes:
 
 **Passo 1 — Devo fazer um leilão?**
-Antes de recomendar um formato, o BidWise verifica condições desqualificadoras: fornecedor único, itens estratégicos ou de gargalo com menos de 3 fornecedores, ou um campo onde baixo interesse + comportamento conservador torna um leilão deserto provável. Se alguma condição for identificada, o BidWise recomenda um mecanismo alternativo (RFQ, negociação direta ou nova rodada de qualificação).
+Antes de recomendar um formato, o BidWise verifica condições desqualificadoras: fornecedor único, itens estratégicos ou de gargalo com menos de 3 fornecedores, ou um cenário onde baixo interesse + comportamento conservador torna um leilão deserto provável. Se alguma condição for identificada, o BidWise recomenda um mecanismo alternativo (RFQ, negociação direta ou nova rodada de qualificação).
 
 **Passo 2 — Pontuação de cada formato**
 Quatro funções de pontuação rodam independentemente — uma por formato. Cada função avalia o cenário em múltiplos fatores: número de fornecedores, nível de comoditização, perfis individuais de comportamento, perfis de interesse estratégico, classificação Kraljic e dispersão de preços calculada. Cada fator adiciona ou subtrai pontos. O formato com maior pontuação total vence.
 
 Os principais drivers por formato:
 
-* **English Full (ranking + termômetro):** Favorece campos grandes (4+), alta comoditização, fornecedores competitivos, alto interesse estratégico. O termômetro amplifica a pressão psicológica.
-* **English Ranking Only:** Favorece campos moderados (3-5), comoditização média, comportamento moderado. Remove o termômetro para evitar que fornecedores calibrem o mínimo exato necessário para vencer.
-* **Dutch Reverse:** Favorece campos pequenos (2-3), fornecedores conservadores, baixa dispersão. Máxima opacidade — cada fornecedor decide independentemente. O mais próximo de um lance selado.
-* **Japanese Reverse:** Favorece campos grandes (5+), alta comoditização, comportamento heterogêneo. A eliminação progressiva força decisões ativas a cada rodada.
+* **Leilão Reverso Inglês (ranking + termômetro):** Favorece grupos grandes (4+), alta comoditização, fornecedores competitivos, alto interesse estratégico. O termômetro amplifica a pressão psicológica.
+* **Leilão Reverso Inglês (apenas ranking):** Favorece grupos moderados (3-5), comoditização média, comportamento moderado. Remove o termômetro para evitar que fornecedores calibrem o mínimo exato necessário para vencer.
+* **Leilão Reverso Holandês:** Favorece grupos pequenos (2-3), fornecedores conservadores, baixa dispersão. Máxima opacidade — cada fornecedor decide independentemente. O mais próximo de um lance selado.
+* **Leilão Reverso Japonês:** Favorece grupos grandes (5+), alta comoditização, comportamento heterogêneo. A eliminação progressiva força decisões ativas a cada rodada.
 
 **Passo 3 — Calculando o decremento mínimo**
 O decremento determina quanto um fornecedor deve reduzir por lance. Muito pequeno = fornecedores sobem no ranking sem competição real. Muito grande = fornecedores mais fracos desistem imediatamente.
 
-O BidWise calcula a lacuna média entre propostas adjacentes no campo de fornecedores e toma 40% dessa lacuna como decremento base. Isso garante que cada lance possa potencialmente mudar o ranking sem ser impossível.
+O BidWise calcula a lacuna média entre propostas adjacentes no grupo de fornecedores e toma 40% dessa lacuna como decremento base. Isso garante que cada lance possa potencialmente mudar o ranking sem ser impossível.
 
 O decremento é então limitado por caps dinâmicos baseados no valor do contrato:
 
@@ -35,7 +35,7 @@ O decremento é então limitado por caps dinâmicos baseados no valor do contrat
 * $2M – $10M: 0,2% – 6% (cada lance precisa de aprovação interna)
 * Acima de $10M: 0,1% – 3% (decisões em nível de comitê por lance)
 
-Ajustado pelo comportamento dos fornecedores: campos competitivos recebem +10%, campos conservadores recebem -20%.
+Ajustado pelo comportamento dos fornecedores: grupos competitivos recebem +10%, grupos conservadores recebem -20%.
 
 **Passo 4 — Definindo o preço de abertura**
 A estratégia de preço de abertura depende do formato:
