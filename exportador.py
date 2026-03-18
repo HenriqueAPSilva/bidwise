@@ -33,6 +33,7 @@ from reportlab.platypus import (
 
 from motor import FormatoLeilao, InputLeilao, Recomendacao
 from simulador import SimulacaoResult, TipoAlerta
+from i18n import t as _t
 
 _FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
     FormatoLeilao.INGLES_COMPLETO: "English Reverse — Ranking + Thermometer",
@@ -276,27 +277,27 @@ def _fmt_pct(value: Optional[float], suffix: str = "%") -> str:
     return f"{value:.1f}{suffix}"
 
 
-def _confidence_label(score: float) -> str:
+def _confidence_label(score: float, lang: str = "en") -> str:
     if score >= 0.30:
-        return f"High confidence ({score:.0%})"
+        return _t("pdf_confidence_high", lang).format(score=score)
     elif score >= 0.15:
-        return f"Moderate confidence ({score:.0%})"
+        return _t("pdf_confidence_mid", lang).format(score=score)
     else:
-        return f"Low confidence — formats are close ({score:.0%})"
+        return _t("pdf_confidence_low", lang).format(score=score)
 
 
 # ──────────────────────────────────────────────────────────────────────
 # SEÇÕES DO DOCUMENTO
 # ──────────────────────────────────────────────────────────────────────
 
-def _section_header(styles: dict, page_w: float) -> list:
+def _section_header(styles: dict, page_w: float, lang: str = "en") -> list:
     now = datetime.now().strftime("%Y-%m-%d  %H:%M")
     elements = []
 
     # Linha do logo + meta lado a lado via tabela
     logo_p   = Paragraph("BidWise", styles["logo"])
-    sub_p    = Paragraph("Reverse Auction Strategy Report", styles["subtitle"])
-    meta_p   = Paragraph(f"Generated on {now}", styles["meta"])
+    sub_p    = Paragraph(_t("pdf_report_title", lang), styles["subtitle"])
+    meta_p   = Paragraph(_t("pdf_generated_on", lang).format(now=now), styles["meta"])
 
     header_table = Table(
         [[logo_p, meta_p]],
@@ -318,46 +319,42 @@ def _section_header(styles: dict, page_w: float) -> list:
 
 
 def _section_scenario_summary(
-    styles: dict, inp: InputLeilao, page_w: float
+    styles: dict, inp: InputLeilao, page_w: float, lang: str = "en"
 ) -> list:
     """Scenario inputs snapshot — printed before the recommendation card."""
     elements: list = []
-    elements.append(Paragraph("Scenario Summary", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_scenario_summary", lang), styles["section_title"]))
 
-    _KRALJIC_EN = {
-        "Alavanca":    "Leverage",
-        "Estratégico": "Strategic",
-        "Gargalo":     "Bottleneck",
-        "Não crítico": "Non-critical",
-    }
-    _COMOD_EN = {
-        "Alto":  "High",
-        "Médio": "Medium",
-        "Baixo": "Low",
-    }
+    _is_pt = lang == "pt"
 
-    _BEHAV_EN = {
-        "Competitivo": "Competitive",
-        "Moderado":    "Moderate",
-        "Conservador": "Conservative",
+    _KRALJIC_LABEL = {
+        "Alavanca":    "Alavanca"    if _is_pt else "Leverage",
+        "Estratégico": "Estratégico" if _is_pt else "Strategic",
+        "Gargalo":     "Gargalo"     if _is_pt else "Bottleneck",
+        "Não crítico": "Não crítico" if _is_pt else "Non-critical",
     }
-    _INT_EN = {
-        "Alto":  "High",
-        "Médio": "Medium",
-        "Baixo": "Low",
+    _NIVEL_LABEL = {
+        "Alto":  "Alto"  if _is_pt else "High",
+        "Médio": "Médio" if _is_pt else "Medium",
+        "Baixo": "Baixo" if _is_pt else "Low",
+    }
+    _BEHAV_LABEL = {
+        "Competitivo": "Competitivo" if _is_pt else "Competitive",
+        "Moderado":    "Moderado"    if _is_pt else "Moderate",
+        "Conservador": "Conservador" if _is_pt else "Conservative",
     }
 
     # ── Auction context ──────────────────────────────────────────────
     ctx_rows = [
-        [Paragraph("Parameter", styles["table_header"]),
-         Paragraph("Value", styles["table_header"])],
-        [Paragraph("Kraljic quadrant", styles["table_cell_bold"]),
-         Paragraph(_KRALJIC_EN.get(inp.kraljic.value, inp.kraljic.value), styles["table_cell"])],
-        [Paragraph("Item commoditization", styles["table_cell_bold"]),
-         Paragraph(_COMOD_EN.get(inp.comoditizacao.value, inp.comoditizacao.value), styles["table_cell"])],
-        [Paragraph("Number of suppliers", styles["table_cell_bold"]),
+        [Paragraph(_t("pdf_param_header", lang), styles["table_header"]),
+         Paragraph(_t("pdf_value_header", lang), styles["table_header"])],
+        [Paragraph(_t("kraljic", lang), styles["table_cell_bold"]),
+         Paragraph(_KRALJIC_LABEL.get(inp.kraljic.value, inp.kraljic.value), styles["table_cell"])],
+        [Paragraph(_t("commoditization", lang), styles["table_cell_bold"]),
+         Paragraph(_NIVEL_LABEL.get(inp.comoditizacao.value, inp.comoditizacao.value), styles["table_cell"])],
+        [Paragraph(_t("pdf_num_suppliers", lang), styles["table_cell_bold"]),
          Paragraph(str(inp.num_fornecedores), styles["table_cell"])],
-        [Paragraph("Price spread", styles["table_cell_bold"]),
+        [Paragraph(_t("pdf_price_spread", lang), styles["table_cell_bold"]),
          Paragraph(f"{inp.dispersao_precos:.1f}%", styles["table_cell"])],
     ]
     ctx_table = Table(ctx_rows, colWidths=[page_w * 0.50, page_w * 0.50])
@@ -376,18 +373,18 @@ def _section_scenario_summary(
 
     # ── Supplier profiles ────────────────────────────────────────────
     sup_rows: list[list] = [[
-        Paragraph("Supplier", styles["table_header"]),
-        Paragraph("Proposal ($)", styles["table_header"]),
-        Paragraph("Behavior", styles["table_header"]),
-        Paragraph("Strategic Interest", styles["table_header"]),
+        Paragraph(_t("pdf_supplier_header", lang), styles["table_header"]),
+        Paragraph(_t("pdf_proposal_header", lang), styles["table_header"]),
+        Paragraph(_t("pdf_behavior_header", lang), styles["table_header"]),
+        Paragraph(_t("pdf_interest_header", lang), styles["table_header"]),
     ]]
     for forn in inp.fornecedores:
         proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
         sup_rows.append([
             Paragraph(forn.nome, styles["table_cell_bold"]),
             Paragraph(proposta, styles["table_cell"]),
-            Paragraph(_BEHAV_EN.get(forn.comportamento.value, forn.comportamento.value), styles["table_cell"]),
-            Paragraph(_INT_EN.get(forn.interesse_estrategico.value, forn.interesse_estrategico.value), styles["table_cell"]),
+            Paragraph(_BEHAV_LABEL.get(forn.comportamento.value, forn.comportamento.value), styles["table_cell"]),
+            Paragraph(_NIVEL_LABEL.get(forn.interesse_estrategico.value, forn.interesse_estrategico.value), styles["table_cell"]),
         ])
 
     sup_col_w = [page_w * 0.28, page_w * 0.25, page_w * 0.24, page_w * 0.23]
@@ -409,10 +406,10 @@ def _section_scenario_summary(
 
 
 def _section_recommendation_card(
-    styles: dict, rec: Recomendacao, page_w: float
+    styles: dict, rec: Recomendacao, page_w: float, lang: str = "en"
 ) -> list:
     elements = []
-    elements.append(Paragraph("1. Recommended Format", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_rec", lang), styles["section_title"]))
 
     fg_color, bg_color = _FORMAT_COLORS.get(
         rec.formato, (BLUE, LIGHT_BLUE)
@@ -454,21 +451,21 @@ def _section_recommendation_card(
     return elements
 
 
-def _section_parameters(styles: dict, rec: Recomendacao, page_w: float) -> list:
+def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: str = "en") -> list:
     elements = []
-    elements.append(Paragraph("2. Optimized Parameters", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_params", lang), styles["section_title"]))
 
     if not rec.parametros:
-        elements.append(Paragraph("No parameters available for this scenario.", styles["body"]))
+        elements.append(Paragraph(_t("pdf_no_params", lang), styles["body"]))
         return elements
 
     p = rec.parametros
 
     rows: list[list] = [
         [
-            Paragraph("Parameter", styles["table_header"]),
-            Paragraph("Value (%)", styles["table_header"]),
-            Paragraph("Value ($)", styles["table_header"]),
+            Paragraph(_t("pdf_param_header", lang), styles["table_header"]),
+            Paragraph(_t("param_col_value_pct", lang), styles["table_header"]),
+            Paragraph(_t("param_col_value_brl", lang), styles["table_header"]),
         ]
     ]
 
@@ -480,45 +477,46 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float) -> list:
         ]
 
     rows.append(row(
-        "Minimum decrement",
+        _t("min_decrement_param", lang),
         _fmt_pct(p.decremento_min_pct),
         _fmt_brl(p.decremento_min_brl),
     ))
     rows.append(row(
-        "Opening price (vs. best proposal)",
+        _t("opening_price_param", lang),
         _fmt_pct(p.preco_abertura_pct),
         _fmt_brl(p.preco_abertura_brl),
     ))
     rows.append(row(
-        "Auction duration",
+        _t("duration_param", lang),
         f"{p.duracao_minutos} min",
         "—",
     ))
 
     if p.prorrogacao_minutos:
         rows.append(row(
-            f"Auto-extension (if bid in last {p.prorrogacao_trigger_minutos} min)",
+            _t("auto_ext_param", lang).format(trigger=p.prorrogacao_trigger_minutos),
             f"+{p.prorrogacao_minutos} min",
             "—",
         ))
 
     if p.visibilidade:
         rows.append([
-            Paragraph("Thermometer visibility", styles["table_cell_bold"]),
+            Paragraph(_t("thermometer_param", lang), styles["table_cell_bold"]),
             Paragraph(p.visibilidade, styles["table_cell"]),
             Paragraph("—", styles["table_cell"]),
         ])
 
     if p.rodadas_estimadas:
+        _rounds_label = _t("rounds_param", lang).format(interval=p.intervalo_rodada_minutos)
         rows.append(row(
-            f"Estimated rounds ({p.intervalo_rodada_minutos} min each)",
-            f"~{p.rodadas_estimadas} rounds",
+            _rounds_label,
+            f"~{p.rodadas_estimadas}",
             "—",
         ))
 
     if p.incremento_holandes_pct:
         rows.append(row(
-            "Dutch increment per tick",
+            _t("dutch_increment_param", lang),
             _fmt_pct(p.incremento_holandes_pct),
             _fmt_brl(p.incremento_holandes_brl),
         ))
@@ -546,12 +544,12 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float) -> list:
     return elements
 
 
-def _section_saving(styles: dict, rec: Recomendacao, page_w: float) -> list:
+def _section_saving(styles: dict, rec: Recomendacao, page_w: float, lang: str = "en") -> list:
     elements = []
-    elements.append(Paragraph("3. Saving Estimate", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_saving", lang), styles["section_title"]))
 
     if not rec.saving:
-        elements.append(Paragraph("No saving estimate available for this scenario.", styles["body"]))
+        elements.append(Paragraph(_t("pdf_no_saving", lang), styles["body"]))
         return elements
 
     s = rec.saving
@@ -563,7 +561,11 @@ def _section_saving(styles: dict, rec: Recomendacao, page_w: float) -> list:
         (TEAL, colors.HexColor("#E6F5F5")),
         (GREEN, GREEN_BG),
     ]
-    labels    = ["Pessimistic", "Realistic",    "Optimistic"]
+    labels    = [
+        _t("pdf_saving_pessimistic", lang),
+        _t("pdf_saving_realistic", lang),
+        _t("pdf_saving_optimistic", lang),
+    ]
     pct_vals  = [s.pessimista_pct, s.realista_pct, s.otimista_pct]
     brl_vals  = [s.pessimista_brl, s.realista_brl, s.otimista_brl]
 
@@ -622,11 +624,7 @@ def _section_saving(styles: dict, rec: Recomendacao, page_w: float) -> list:
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
 
-    note_p = Paragraph(
-        "Estimates based on auction theory benchmarks and historical procurement data. "
-        "Actual saving depends on market conditions and supplier behavior.",
-        styles["body"],
-    )
+    note_p = Paragraph(_t("pdf_saving_note", lang), styles["body"])
 
     elements.append(saving_table)
     elements.append(_sp(0.2))
@@ -638,9 +636,10 @@ def _section_simulation(
     styles: dict,
     sim: SimulacaoResult,
     page_w: float,
+    lang: str = "en",
 ) -> list:
     elements = []
-    elements.append(Paragraph("4. Supplier Behavior Simulation", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_simulation", lang), styles["section_title"]))
 
     if sim.formato == FormatoLeilao.NAO_LEILAO:
         elements.append(Paragraph(sim.narrativa, styles["body"]))
@@ -651,7 +650,7 @@ def _section_simulation(
     for f in sim.fornecedores:
         contagem[f.arquetipo.value] = contagem.get(f.arquetipo.value, 0) + 1
     dist_str = "  |  ".join(f"{v}× {k}" for k, v in contagem.items())
-    elements.append(Paragraph(f"Supplier field: {dist_str}", styles["body"]))
+    elements.append(Paragraph(_t("pdf_supplier_field", lang).format(dist=dist_str), styles["body"]))
     elements.append(_sp(0.15))
 
     # Narrativa determinística
@@ -662,9 +661,11 @@ def _section_simulation(
     # Vencedor e preço final
     if sim.vencedor_provavel and sim.preco_final_estimado_pct is not None:
         result_p = Paragraph(
-            f"<b>Projected outcome:</b> {sim.vencedor_provavel.nome} wins at "
-            f"{sim.preco_final_estimado_pct:+.1f}% vs. best proposal received "
-            f"(saving: {abs(sim.preco_final_estimado_pct):.1f}%).",
+            _t("pdf_projected_outcome", lang).format(
+                winner=sim.vencedor_provavel.nome,
+                pct=sim.preco_final_estimado_pct,
+                saving=abs(sim.preco_final_estimado_pct),
+            ),
             styles["body"],
         )
         elements.append(result_p)
@@ -672,13 +673,13 @@ def _section_simulation(
     return elements
 
 
-def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float) -> list:
+def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float, lang: str = "en") -> list:
     elements = []
 
     if not sim.alertas:
         return elements
 
-    elements.append(Paragraph("5. Risk Alerts", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_alerts", lang), styles["section_title"]))
 
     sev_style = {
         "Alta":  ("alert_high", "[HIGH]  "),
@@ -717,17 +718,17 @@ def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float) -> list:
     return elements
 
 
-def _section_references(styles: dict, rec: Recomendacao, page_w: float) -> list:
+def _section_references(styles: dict, rec: Recomendacao, page_w: float, lang: str = "en") -> list:
     elements = []
-    elements.append(Paragraph("7. Theoretical References", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_references", lang), styles["section_title"]))
 
     if not rec.referencias:
         return elements
 
     rows: list[list] = [[
-        Paragraph("Book", styles["table_header"]),
-        Paragraph("Author", styles["table_header"]),
-        Paragraph("Applied Concept", styles["table_header"]),
+        Paragraph(_t("pdf_book_header", lang), styles["table_header"]),
+        Paragraph(_t("pdf_author_header", lang), styles["table_header"]),
+        Paragraph(_t("pdf_concept_header", lang), styles["table_header"]),
     ]]
 
     for ref in rec.referencias:
@@ -940,16 +941,14 @@ def _section_uncertainty_chart(
     styles: dict,
     sim: SimulacaoResult,
     page_w: float,
+    lang: str = "en",
 ) -> list:
     elements = []
-    elements.append(Paragraph("6. Uncertainty Projection", styles["section_title"]))
+    elements.append(Paragraph(_t("pdf_section_chart", lang), styles["section_title"]))
 
     fig, has_data = draw_uncertainty_chart(sim.alvos_por_fornecedor, dark=False)
     if not has_data:
-        elements.append(Paragraph(
-            "No chart available — enter supplier proposal values in the input form.",
-            styles["body"],
-        ))
+        elements.append(Paragraph(_t("pdf_no_chart", lang), styles["body"]))
         return elements
 
     buf = io.BytesIO()
@@ -963,21 +962,14 @@ def _section_uncertainty_chart(
     return elements
 
 
-def _section_footer(styles: dict) -> list:
+def _section_footer(styles: dict, lang: str = "en") -> list:
     elements = [
         _sp(0.4),
         HRFlowable(width="100%", thickness=0.5, color=GRAY_MID,
                    spaceAfter=6, spaceBefore=0),
-        Paragraph(
-            "Generated by BidWise — github.com/HenriqueAPSilva/bidwise",
-            styles["footer"],
-        ),
+        Paragraph(_t("pdf_footer_gen", lang), styles["footer"]),
         _sp(0.1),
-        Paragraph(
-            "This report is a recommendation tool. "
-            "Final auction configuration decisions remain with the procurement professional.",
-            styles["disclaimer"],
-        ),
+        Paragraph(_t("pdf_footer_disclaimer", lang), styles["disclaimer"]),
     ]
     return elements
 
@@ -990,6 +982,7 @@ def gerar_pdf(
     inp: InputLeilao,
     rec: Recomendacao,
     sim: SimulacaoResult,
+    lang: str = "en",
 ) -> bytes:
     """
     Gera o relatório PDF completo e retorna os bytes.
@@ -1004,7 +997,7 @@ def gerar_pdf(
         rightMargin=1.8 * cm,
         topMargin=1.5 * cm,
         bottomMargin=1.5 * cm,
-        title="BidWise — Reverse Auction Strategy Report",
+        title=_t("pdf_report_title", lang),
         author="BidWise",
     )
 
@@ -1013,31 +1006,31 @@ def gerar_pdf(
 
     story: list = []
 
-    story.extend(_section_header(styles, page_w))
+    story.extend(_section_header(styles, page_w, lang=lang))
     story.append(_sp(0.3))
 
-    story.extend(_section_scenario_summary(styles, inp, page_w))
+    story.extend(_section_scenario_summary(styles, inp, page_w, lang=lang))
     story.append(_sp(0.4))
 
-    story.extend(_section_recommendation_card(styles, rec, page_w))
+    story.extend(_section_recommendation_card(styles, rec, page_w, lang=lang))
     story.append(_sp(0.4))
 
-    story.extend(_section_parameters(styles, rec, page_w))
+    story.extend(_section_parameters(styles, rec, page_w, lang=lang))
     story.append(_sp(0.4))
 
-    story.extend(_section_saving(styles, rec, page_w))
+    story.extend(_section_saving(styles, rec, page_w, lang=lang))
     story.append(_sp(0.4))
 
-    story.extend(_section_simulation(styles, sim, page_w))
+    story.extend(_section_simulation(styles, sim, page_w, lang=lang))
     story.append(_sp(0.3))
 
-    story.extend(_section_alerts(styles, sim, page_w))
+    story.extend(_section_alerts(styles, sim, page_w, lang=lang))
 
-    story.extend(_section_uncertainty_chart(styles, sim, page_w))
+    story.extend(_section_uncertainty_chart(styles, sim, page_w, lang=lang))
 
-    story.extend(_section_references(styles, rec, page_w))
+    story.extend(_section_references(styles, rec, page_w, lang=lang))
 
-    story.extend(_section_footer(styles))
+    story.extend(_section_footer(styles, lang=lang))
 
     doc.build(story)
     return buffer.getvalue()

@@ -493,8 +493,10 @@ def _gerar_alertas(
     fornecedores: list[FornecedorSimulado],
     eventos: list[Evento],
     formato: FormatoLeilao,
+    lang: str = "en",
 ) -> list[AlertaSimulacao]:
     alertas: list[AlertaSimulacao] = []
+    _is_pt = lang == "pt"
 
     n_dropouts = sum(1 for f in fornecedores if f.arquetipo == Arquetipo.DROPOUT_CANDIDATE)
     n_ativos = inp.num_fornecedores - n_dropouts
@@ -506,6 +508,10 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.LEILAO_DESERTO,
             descricao=(
+                f"Com {n_dropouts} candidatos a desistência de {inp.num_fornecedores} "
+                f"fornecedores, há alto risco de leilão deserto — apenas "
+                f"{n_ativos} fornecedor(es) deve(m) licitar ativamente."
+                if _is_pt else
                 f"With {n_dropouts} dropout candidates out of {inp.num_fornecedores} "
                 f"suppliers, there is a high risk of a desert auction — only "
                 f"{n_ativos} supplier(s) are expected to bid actively."
@@ -516,6 +522,10 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.CAMPO_FRACO,
             descricao=(
+                f"Campo efetivo de apenas {n_ativos} fornecedores ativos. "
+                "Competição limitada — considere o Dutch Reverse para cenários "
+                "com poucos participantes reais."
+                if _is_pt else
                 f"Effective field of only {n_ativos} active suppliers. "
                 "Limited competition — consider Dutch Reverse for scenarios "
                 "with few real participants."
@@ -528,6 +538,10 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.SINAL_CONLUIO,
             descricao=(
+                "Campo ativo pequeno com comportamento não competitivo e termômetro ativado. "
+                "Os fornecedores podem usar o sinal de proximidade para coordenação tácita "
+                "e convergir para o mínimo absoluto sem competição real."
+                if _is_pt else
                 "Small active field with non-competitive behavior and thermometer enabled. "
                 "Suppliers may use the proximity signal to coordinate tacitly "
                 "and converge to the absolute minimum without real competition."
@@ -538,6 +552,10 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.SINAL_CONLUIO,
             descricao=(
+                "Risco moderado de coordenação tácita: poucos fornecedores ativos tornam "
+                "a observação mútua mais fácil, possibilitando comportamento estratégico "
+                "de 'espera e veja'."
+                if _is_pt else
                 "Moderate risk of tacit coordination: few active suppliers make "
                 "mutual observation easier, enabling strategic 'wait and see' behavior."
             ),
@@ -551,6 +569,11 @@ def _gerar_alertas(
             alertas.append(AlertaSimulacao(
                 tipo=TipoAlerta.ACEITE_RAPIDO,
                 descricao=(
+                    f"Com {len(leaders)} Líder(es) Agressivo(s) e alto interesse estratégico, "
+                    "há risco de aceite nos primeiros ticks antes que o preço atinja o "
+                    "potencial máximo de saving. Considere um incremento mais lento (0,5%/tick) "
+                    "para maximizar a extração."
+                    if _is_pt else
                     f"With {len(leaders)} Aggressive Leader(s) and high strategic interest, "
                     "there is a risk of acceptance in the first ticks before the price reaches "
                     "maximum saving potential. Consider a slower increment (0.5%/tick) "
@@ -566,6 +589,11 @@ def _gerar_alertas(
             alertas.append(AlertaSimulacao(
                 tipo=TipoAlerta.ELIMINACAO_RAPIDA,
                 descricao=(
+                    f"{n_dropouts} de {inp.num_fornecedores} fornecedores "
+                    f"({dropouts_pct:.0%}) devem ser eliminados nas rodadas iniciais. "
+                    "O leilão pode convergir mais rápido que o planejado — considere "
+                    "intervalos de rodada mais longos (7–10 min) para evitar pressão excessiva."
+                    if _is_pt else
                     f"{n_dropouts} of {inp.num_fornecedores} suppliers "
                     f"({dropouts_pct:.0%}) are expected to be eliminated in early rounds. "
                     "The auction may converge faster than planned — consider longer "
@@ -583,6 +611,11 @@ def _gerar_alertas(
         alertas.append(AlertaSimulacao(
             tipo=TipoAlerta.DESISTENCIA_PRECOCE,
             descricao=(
+                "Comportamento conservador combinado com baixo interesse estratégico sugere "
+                "que múltiplos fornecedores podem desistir antes que o leilão atinja saving "
+                "significativo. Verifique se os fornecedores receberam briefing adequado sobre "
+                "volume do contrato e condições comerciais."
+                if _is_pt else
                 "Conservative behavior combined with low strategic interest suggests "
                 "multiple suppliers may withdraw before the auction reaches meaningful saving. "
                 "Verify that suppliers received adequate briefing on contract volume "
@@ -607,28 +640,40 @@ def _gerar_narrativa(
     vencedor: Optional[FornecedorSimulado],
     preco_final_pct: float,
     rodadas_japones: int = 10,
+    lang: str = "en",
 ) -> str:
     from collections import defaultdict
 
     partes: list[str] = []
+    _is_pt = lang == "pt"
 
-    _arq_desc = {
-        Arquetipo.AGGRESSIVE_LEADER:  "competitive, high interest — likely to bid early and often",
-        Arquetipo.CAUTIOUS_FOLLOWER:  "calculated, watches ranking — activates in final sprint",
-        Arquetipo.FLOOR_SETTER:       "moderate stance — will mark position but not overextend",
-        Arquetipo.DROPOUT_CANDIDATE:  "conservative or low interest — likely to withdraw early",
-    }
+    _arq_desc: dict[Arquetipo, str]
+    if _is_pt:
+        _arq_desc = {
+            Arquetipo.AGGRESSIVE_LEADER:  "competitivo, alto interesse — tende a licitar cedo e com frequência",
+            Arquetipo.CAUTIOUS_FOLLOWER:  "calculado, observa o ranking — ativa no sprint final",
+            Arquetipo.FLOOR_SETTER:       "postura moderada — marca posição mas não se expõe demais",
+            Arquetipo.DROPOUT_CANDIDATE:  "conservador ou baixo interesse — tende a se retirar cedo",
+        }
+    else:
+        _arq_desc = {
+            Arquetipo.AGGRESSIVE_LEADER:  "competitive, high interest — likely to bid early and often",
+            Arquetipo.CAUTIOUS_FOLLOWER:  "calculated, watches ranking — activates in final sprint",
+            Arquetipo.FLOOR_SETTER:       "moderate stance — will mark position but not overextend",
+            Arquetipo.DROPOUT_CANDIDATE:  "conservative or low interest — likely to withdraw early",
+        }
 
     # ── Group suppliers by archetype for compact, natural-language descriptions ──
     grupos: dict[Arquetipo, list[str]] = defaultdict(list)
     for f in fornecedores:
-        label = f.nome_original or f"Supplier {f.id}"
+        label = f.nome_original or (f"Fornecedor {f.id}" if _is_pt else f"Supplier {f.id}")
         grupos[f.arquetipo].append(label)
 
     def _join(nomes: list[str]) -> str:
         if len(nomes) == 1:
             return nomes[0]
-        return ", ".join(nomes[:-1]) + f" and {nomes[-1]}"
+        conj = " e " if _is_pt else " and "
+        return ", ".join(nomes[:-1]) + conj + nomes[-1]
 
     def _verb(nomes: list[str], singular: str, plural: str) -> str:
         return singular if len(nomes) == 1 else plural
@@ -642,62 +687,106 @@ def _gerar_narrativa(
             perfil_lines.append(
                 f"{_join(nomes)} ({arq.value}): {_arq_desc[arq]}"
             )
-    partes.append("Supplier profiles: " + " — ".join(perfil_lines) + ".")
+    _perfil_header = "Perfis dos fornecedores: " if _is_pt else "Supplier profiles: "
+    partes.append(_perfil_header + " — ".join(perfil_lines) + ".")
 
     if formato in (FormatoLeilao.INGLES_COMPLETO, FormatoLeilao.INGLES_REDUZIDO):
         tem_term = formato == FormatoLeilao.INGLES_COMPLETO
 
-        leaders  = grupos.get(Arquetipo.AGGRESSIVE_LEADER, [])
+        leaders   = grupos.get(Arquetipo.AGGRESSIVE_LEADER, [])
         followers = grupos.get(Arquetipo.CAUTIOUS_FOLLOWER, [])
         dropouts  = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
 
         if leaders:
-            partes.append(
-                f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
-                f"{_verb(leaders, 'is', 'are')} expected to open immediately with aggressive "
-                f"bids to establish the price floor."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
+                    f"{'devem' if len(leaders)>1 else 'deve'} abrir imediatamente com lances "
+                    f"agressivos para estabelecer o piso de preço."
+                )
+            else:
+                partes.append(
+                    f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
+                    f"{_verb(leaders, 'is', 'are')} expected to open immediately with aggressive "
+                    f"bids to establish the price floor."
+                )
         else:
             partes.append(
+                "Nenhum fornecedor com perfil agressivo foi identificado — "
+                "a fase de abertura pode ser lenta."
+                if _is_pt else
                 "No supplier with an aggressive profile was identified — "
                 "the opening phase may be slow."
             )
 
         if dropouts:
-            partes.append(
-                f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
-                f"{_verb(dropouts, 'is', 'are')} likely to withdraw early or not bid "
-                f"actively due to conservative stance or low strategic interest."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                    f"{'tendem' if len(dropouts)>1 else 'tende'} a se retirar cedo ou não licitar "
+                    f"ativamente devido a postura conservadora ou baixo interesse estratégico."
+                )
+            else:
+                partes.append(
+                    f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                    f"{_verb(dropouts, 'is', 'are')} likely to withdraw early or not bid "
+                    f"actively due to conservative stance or low strategic interest."
+                )
 
         if followers:
-            partes.append(
-                f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
-                f"{_verb(followers, 'is', 'are')} expected to activate in the final sprint. "
-                + (
-                    "The thermometer will signal proximity to the leader, triggering sniping bids."
-                    if tem_term else
-                    "Without the thermometer, ranking position alone guides their final bid timing."
+            if _is_pt:
+                partes.append(
+                    f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
+                    f"{'devem' if len(followers)>1 else 'deve'} ativar no sprint final. "
+                    + (
+                        "O termômetro sinalizará a proximidade do líder, acionando lances de sniping."
+                        if tem_term else
+                        "Sem o termômetro, apenas a posição no ranking orienta o timing do lance final."
+                    )
                 )
-            )
+            else:
+                partes.append(
+                    f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
+                    f"{_verb(followers, 'is', 'are')} expected to activate in the final sprint. "
+                    + (
+                        "The thermometer will signal proximity to the leader, triggering sniping bids."
+                        if tem_term else
+                        "Without the thermometer, ranking position alone guides their final bid timing."
+                    )
+                )
 
     elif formato == FormatoLeilao.HOLANDES:
         leaders  = grupos.get(Arquetipo.AGGRESSIVE_LEADER, [])
-        dropouts  = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
+        dropouts = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
 
         if leaders:
-            partes.append(
-                f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
-                f"{_verb(leaders, 'has', 'have')} a low acceptance threshold and may accept "
-                f"the price in early ticks — the tick increment must be calibrated carefully "
-                f"to maximize extraction."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
+                    f"{'têm' if len(leaders)>1 else 'tem'} threshold de aceite baixo e "
+                    f"{'podem' if len(leaders)>1 else 'pode'} aceitar o preço nos primeiros ticks — "
+                    f"o incremento por tick deve ser calibrado com cuidado para maximizar a extração."
+                )
+            else:
+                partes.append(
+                    f"{_join(leaders)} (Aggressive Leader{'s' if len(leaders)>1 else ''}) "
+                    f"{_verb(leaders, 'has', 'have')} a low acceptance threshold and may accept "
+                    f"the price in early ticks — the tick increment must be calibrated carefully "
+                    f"to maximize extraction."
+                )
         if dropouts:
-            partes.append(
-                f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
-                f"{_verb(dropouts, 'is', 'are')} unlikely to accept unless the price climbs "
-                f"close to the original proposal."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                    f"{'são' if len(dropouts)>1 else 'é'} improvável que aceite{'m' if len(dropouts)>1 else ''} "
+                    f"a menos que o preço suba próximo à proposta original."
+                )
+            else:
+                partes.append(
+                    f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                    f"{_verb(dropouts, 'is', 'are')} unlikely to accept unless the price climbs "
+                    f"close to the original proposal."
+                )
 
     elif formato == FormatoLeilao.JAPONES:
         dropouts      = grupos.get(Arquetipo.DROPOUT_CANDIDATE, [])
@@ -710,23 +799,45 @@ def _gerar_narrativa(
         cf_round = max(3, num_r * 2 // 3)
 
         if dropouts:
-            partes.append(
-                f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
-                f"{_verb(dropouts, 'is', 'are')} expected to be eliminated in round 1 "
-                f"— conservative profile or low strategic interest prevents acceptance at opening price."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                    f"{'devem' if len(dropouts)>1 else 'deve'} ser eliminado{'s' if len(dropouts)>1 else ''} "
+                    f"na rodada 1 — perfil conservador ou baixo interesse estratégico impede "
+                    f"a aceitação ao preço de abertura."
+                )
+            else:
+                partes.append(
+                    f"{_join(dropouts)} (Dropout Candidate{'s' if len(dropouts)>1 else ''}) "
+                    f"{_verb(dropouts, 'is', 'are')} expected to be eliminated in round 1 "
+                    f"— conservative profile or low strategic interest prevents acceptance at opening price."
+                )
         if floor_setters:
-            partes.append(
-                f"{_join(floor_setters)} (Floor-setter{'s' if len(floor_setters)>1 else ''}) "
-                f"{_verb(floor_setters, 'is', 'are')} expected to exit around rounds "
-                f"{fs_round}–{fs_round + 1} as prices approach their cost floor."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(floor_setters)} (Floor-setter{'s' if len(floor_setters)>1 else ''}) "
+                    f"{'devem' if len(floor_setters)>1 else 'deve'} sair por volta das rodadas "
+                    f"{fs_round}–{fs_round + 1} à medida que os preços se aproximam do piso de custo."
+                )
+            else:
+                partes.append(
+                    f"{_join(floor_setters)} (Floor-setter{'s' if len(floor_setters)>1 else ''}) "
+                    f"{_verb(floor_setters, 'is', 'are')} expected to exit around rounds "
+                    f"{fs_round}–{fs_round + 1} as prices approach their cost floor."
+                )
         if followers:
-            partes.append(
-                f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
-                f"{_verb(followers, 'is', 'are')} projected to be eliminated around round {cf_round}, "
-                f"when prices drop below their viability threshold."
-            )
+            if _is_pt:
+                partes.append(
+                    f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
+                    f"{'devem ser eliminados' if len(followers)>1 else 'deve ser eliminado'} por volta da rodada {cf_round}, "
+                    f"quando os preços caem abaixo do threshold de viabilidade."
+                )
+            else:
+                partes.append(
+                    f"{_join(followers)} (Cautious Follower{'s' if len(followers)>1 else ''}) "
+                    f"{_verb(followers, 'is', 'are')} projected to be eliminated around round {cf_round}, "
+                    f"when prices drop below their viability threshold."
+                )
 
         # Final rounds prediction
         finalists: list[str] = leaders[:]
@@ -736,25 +847,36 @@ def _gerar_narrativa(
             finalists = leaders + followers[:1]
         if len(finalists) >= 2:
             partes.append(
+                f"As rodadas finais devem se resolver entre {_join(finalists)}."
+                if _is_pt else
                 f"The final rounds are expected to resolve between {_join(finalists)}."
             )
         elif finalists:
             partes.append(
+                f"{finalists[0]} deve ser o último fornecedor em pé."
+                if _is_pt else
                 f"{finalists[0]} is projected to be the last supplier standing."
             )
 
     if vencedor:
-        venc_nome = vencedor.nome_original or f"Supplier {vencedor.id}"
+        venc_nome = vencedor.nome_original or (f"Fornecedor {vencedor.id}" if _is_pt else f"Supplier {vencedor.id}")
         bidders = [f for f in fornecedores if f.arquetipo != Arquetipo.DROPOUT_CANDIDATE]
         others = sorted(
             [f for f in bidders if f.id != vencedor.id],
             key=lambda f: f.custo_relativo,
         )
         runner_up = others[0] if others else None
-        runner_nome = (runner_up.nome_original or f"Supplier {runner_up.id}") if runner_up else None
+        runner_nome = (
+            runner_up.nome_original or (f"Fornecedor {runner_up.id}" if _is_pt else f"Supplier {runner_up.id}")
+        ) if runner_up else None
 
         if runner_nome:
             partes.append(
+                f"Melhor posicionado para vencer: {venc_nome}, com base na menor proposta "
+                f"equalizada e perfil comportamental, seguido de {runner_nome}. "
+                f"Leilão deve fechar em aproximadamente {abs(preco_final_pct):.1f}% "
+                f"abaixo do melhor preço de equalização (cenário realista)."
+                if _is_pt else
                 f"Best positioned to win: {venc_nome}, based on lowest equalized proposal "
                 f"and behavioral profile, followed by {runner_nome}. "
                 f"Auction expected to close at approximately {abs(preco_final_pct):.1f}% "
@@ -762,6 +884,10 @@ def _gerar_narrativa(
             )
         else:
             partes.append(
+                f"Melhor posicionado para vencer: {venc_nome}, com base na menor proposta "
+                f"equalizada e perfil comportamental. "
+                f"Fechamento esperado: {abs(preco_final_pct):.1f}% abaixo do melhor preço de equalização."
+                if _is_pt else
                 f"Best positioned to win: {venc_nome}, based on lowest equalized proposal "
                 f"and behavioral profile. "
                 f"Expected closing: {abs(preco_final_pct):.1f}% below best equalization price."
@@ -771,6 +897,9 @@ def _gerar_narrativa(
         alertas_altos = [a for a in alertas if a.severidade == "Alta"]
         if alertas_altos:
             partes.append(
+                f"ATENÇÃO — {len(alertas_altos)} alerta(s) de alta severidade: "
+                + " | ".join(a.descricao for a in alertas_altos)
+                if _is_pt else
                 f"WARNING — {len(alertas_altos)} high-severity alert(s): "
                 + " | ".join(a.descricao for a in alertas_altos)
             )
@@ -846,7 +975,7 @@ def _calcular_alvos_por_fornecedor(
 # FUNÇÃO PRINCIPAL
 # ──────────────────────────────────────────────────────────────────────
 
-def simular(inp: InputLeilao, rec: Recomendacao) -> SimulacaoResult:
+def simular(inp: InputLeilao, rec: Recomendacao, lang: str = "en") -> SimulacaoResult:
     """
     Função principal do simulador.
     Recebe InputLeilao + Recomendacao (do motor.py) e retorna SimulacaoResult.
@@ -858,20 +987,30 @@ def simular(inp: InputLeilao, rec: Recomendacao) -> SimulacaoResult:
 
     # NAO_LEILAO — simulação não aplicável
     if formato == FormatoLeilao.NAO_LEILAO:
+        _alerta_desc = (
+            "Leilão não recomendado para este cenário — simulação não aplicável."
+            if lang == "pt" else
+            "Auction not recommended for this scenario — simulation not applicable."
+        )
+        _narrativa_nao = (
+            "O motor de recomendação identificou que o leilão reverso não é o mecanismo "
+            "adequado para este cenário. Nenhuma simulação de comportamento de fornecedores "
+            "está disponível. Consulte o mecanismo alternativo sugerido."
+            if lang == "pt" else
+            "The recommendation engine identified that a reverse auction is not the "
+            "appropriate mechanism for this scenario. No supplier behavior simulation "
+            "is available. Refer to the suggested alternative mechanism."
+        )
         return SimulacaoResult(
             formato=formato,
             fornecedores=[],
             eventos=[],
             alertas=[AlertaSimulacao(
                 tipo=TipoAlerta.LEILAO_DESERTO,
-                descricao="Auction not recommended for this scenario — simulation not applicable.",
+                descricao=_alerta_desc,
                 severidade="Alta",
             )],
-            narrativa=(
-                "The recommendation engine identified that a reverse auction is not the "
-                "appropriate mechanism for this scenario. No supplier behavior simulation "
-                "is available. Refer to the suggested alternative mechanism."
-            ),
+            narrativa=_narrativa_nao,
             preco_final_estimado_pct=None,
             vencedor_provavel=None,
         )
@@ -932,12 +1071,13 @@ def simular(inp: InputLeilao, rec: Recomendacao) -> SimulacaoResult:
             )
 
     # Gerar alertas
-    alertas = _gerar_alertas(inp, fornecedores, eventos, formato)
+    alertas = _gerar_alertas(inp, fornecedores, eventos, formato, lang=lang)
 
     # Gerar narrativa determinística (uses canonical price)
     narrativa = _gerar_narrativa(
         inp, fornecedores, eventos, alertas, formato, vencedor, abs(preco_final_canonico),
         rodadas_japones=rodadas_japones or 10,
+        lang=lang,
     )
 
     # Calcular alvos individuais por fornecedor (para gráfico no app)

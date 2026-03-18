@@ -198,7 +198,7 @@ class Recomendacao:
 # MOTOR — Funções de detecção, recomendação e cálculo
 # ──────────────────────────────────────────────────────────────────────
 
-def detectar_nao_leilao(inp: InputLeilao) -> Optional[AlertaNaoLeilao]:
+def detectar_nao_leilao(inp: InputLeilao, lang: str = "en") -> Optional[AlertaNaoLeilao]:
     """
     Detecta cenários onde leilão reverso NÃO é o mecanismo adequado.
 
@@ -209,24 +209,35 @@ def detectar_nao_leilao(inp: InputLeilao) -> Optional[AlertaNaoLeilao]:
     """
     motivos: list[str] = []
 
+    _is_pt = lang == "pt"
+
     # Fornecedor único — impossível competição
     if inp.num_fornecedores == 1:
         motivos.append(
+            "Apenas um fornecedor qualificado — não há possibilidade de competição."
+            if _is_pt else
             "Only one qualified supplier — no competition is possible."
         )
 
     # Strategic or Bottleneck with irreplaceable supplier
     if inp.kraljic in (QuadranteKraljic.ESTRATEGICO, QuadranteKraljic.GARGALO):
         if inp.num_fornecedores <= 2:
-            _kraljic_en = {
-                "Estratégico": "Strategic",
-                "Gargalo": "Bottleneck",
+            _kraljic_label = {
+                "Estratégico": "Estratégico" if _is_pt else "Strategic",
+                "Gargalo":     "Gargalo"     if _is_pt else "Bottleneck",
             }.get(inp.kraljic.value, inp.kraljic.value)
-            motivos.append(
-                f"Item classified as {_kraljic_en} with only "
-                f"{inp.num_fornecedores} supplier(s) — risk of damaging the "
-                f"strategic relationship with a critical supplier."
-            )
+            if _is_pt:
+                motivos.append(
+                    f"Item classificado como {_kraljic_label} com apenas "
+                    f"{inp.num_fornecedores} fornecedor(es) — risco de danos ao "
+                    f"relacionamento estratégico com um fornecedor crítico."
+                )
+            else:
+                motivos.append(
+                    f"Item classified as {_kraljic_label} with only "
+                    f"{inp.num_fornecedores} supplier(s) — risk of damaging the "
+                    f"strategic relationship with a critical supplier."
+                )
 
     # Triple risk: low interest + conservative + few suppliers
     if (
@@ -235,6 +246,10 @@ def detectar_nao_leilao(inp: InputLeilao) -> Optional[AlertaNaoLeilao]:
         and inp.num_fornecedores <= 3
     ):
         motivos.append(
+            "Combinação de baixo interesse estratégico, comportamento conservador "
+            "e poucos fornecedores — alto risco de leilão deserto "
+            "(nenhum fornecedor faz lance)."
+            if _is_pt else
             "Combination of low strategic interest, conservative behavior, "
             "and few suppliers — high risk of a desert auction "
             "(no supplier submits a bid)."
@@ -246,6 +261,9 @@ def detectar_nao_leilao(inp: InputLeilao) -> Optional[AlertaNaoLeilao]:
         and inp.num_fornecedores <= 2
     ):
         motivos.append(
+            "Baixa comoditização com no máximo 2 fornecedores — indica especificação "
+            "técnica restritiva que pode não se beneficiar de competição aberta de preços."
+            if _is_pt else
             "Low commoditization with at most 2 suppliers — indicates a "
             "restrictive technical specification that may not benefit "
             "from open price competition."
@@ -265,18 +283,27 @@ def detectar_nao_leilao(inp: InputLeilao) -> Optional[AlertaNaoLeilao]:
     else:
         mecanismo = MecanismoAlternativo.RFQ_NEGOCIACAO
 
-    _mec_en = {
-        "RFQ com negociação posterior": "RFQ with subsequent negotiation",
-        "Nova rodada de qualificação + RFQ": "New qualification round + RFQ",
-        "Negociação direta com fornecedor": "Direct negotiation with supplier",
-        "Contrato guarda-chuva com revisão periódica": "Umbrella contract with periodic review",
-    }.get(mecanismo.value, mecanismo.value)
-    explicacao = (
-        "The presented scenario does not favor open price competition "
-        "in a reverse auction format. "
-        + " ".join(motivos)
-        + f" Recommendation: {_mec_en}."
-    )
+    if _is_pt:
+        _mec_display = mecanismo.value  # already in PT
+        explicacao = (
+            "O cenário apresentado não favorece competição aberta de preços "
+            "em formato de leilão reverso. "
+            + " ".join(motivos)
+            + f" Recomendação: {_mec_display}."
+        )
+    else:
+        _mec_display = {
+            "RFQ com negociação posterior": "RFQ with subsequent negotiation",
+            "Nova rodada de qualificação + RFQ": "New qualification round + RFQ",
+            "Negociação direta com fornecedor": "Direct negotiation with supplier",
+            "Contrato guarda-chuva com revisão periódica": "Umbrella contract with periodic review",
+        }.get(mecanismo.value, mecanismo.value)
+        explicacao = (
+            "The presented scenario does not favor open price competition "
+            "in a reverse auction format. "
+            + " ".join(motivos)
+            + f" Recommendation: {_mec_display}."
+        )
 
     return AlertaNaoLeilao(
         motivos=motivos,
@@ -757,6 +784,7 @@ def calcular_rodadas_japones(dispersao: float, decremento: float) -> int:
 def determinar_visibilidade(
     comportamento: Comportamento,
     num_fornecedores: int,
+    lang: str = "en",
 ) -> str:
     """
     Determines whether English Reverse should use ranking + thermometer
@@ -766,19 +794,41 @@ def determinar_visibilidade(
     o termômetro amplifica a urgência percebida; com campo pequeno
     pode facilitar calibração tácita entre fornecedores.
     """
+    _is_pt = lang == "pt"
+
     if num_fornecedores <= 2:
-        return "Thermometer: Disabled (small field — adds no value)"
+        return (
+            "Termômetro: Desativado (campo pequeno — não agrega valor)"
+            if _is_pt else
+            "Thermometer: Disabled (small field — adds no value)"
+        )
 
     if comportamento == Comportamento.COMPETITIVO and num_fornecedores >= 4:
-        return "Thermometer: Enabled (maximum competitive pressure)"
+        return (
+            "Termômetro: Ativado (máxima pressão competitiva)"
+            if _is_pt else
+            "Thermometer: Enabled (maximum competitive pressure)"
+        )
 
     if comportamento == Comportamento.CONSERVADOR:
-        return "Thermometer: Enabled (helps activate conservative suppliers)"
+        return (
+            "Termômetro: Ativado (ajuda a ativar fornecedores conservadores)"
+            if _is_pt else
+            "Thermometer: Enabled (helps activate conservative suppliers)"
+        )
 
     # Moderate behavior
     if num_fornecedores >= 4:
-        return "Thermometer: Enabled (field large enough to dilute gaming risk)"
-    return "Thermometer: Disabled (small field reduces calibration value)"
+        return (
+            "Termômetro: Ativado (campo grande o suficiente para diluir risco de gaming)"
+            if _is_pt else
+            "Thermometer: Enabled (field large enough to dilute gaming risk)"
+        )
+    return (
+        "Termômetro: Desativado (campo pequeno reduz valor de calibração)"
+        if _is_pt else
+        "Thermometer: Disabled (small field reduces calibration value)"
+    )
 
 
 # ─── Estimativa de saving ────────────────────────────────────────────
@@ -995,7 +1045,7 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
 # FUNÇÃO PRINCIPAL — Orquestra tudo
 # ──────────────────────────────────────────────────────────────────────
 
-def recomendar(inp: InputLeilao) -> Recomendacao:
+def recomendar(inp: InputLeilao, lang: str = "en") -> Recomendacao:
     """
     Função principal do motor. Recebe o InputLeilao e retorna
     a Recomendação completa com formato, parâmetros, saving,
@@ -1003,7 +1053,7 @@ def recomendar(inp: InputLeilao) -> Recomendacao:
     """
 
     # 1) Detectar se leilão é o mecanismo certo
-    alerta = detectar_nao_leilao(inp)
+    alerta = detectar_nao_leilao(inp, lang=lang)
     if alerta:
         return Recomendacao(
             formato=FormatoLeilao.NAO_LEILAO,
@@ -1076,9 +1126,15 @@ def recomendar(inp: InputLeilao) -> Recomendacao:
 
     # Visibilidade — derived directly from recommended format (consistent by definition)
     if formato == FormatoLeilao.INGLES_COMPLETO:
-        visibilidade = "Enabled (ranking + thermometer)"
+        visibilidade = (
+            "Ativado (ranking + termômetro)" if lang == "pt"
+            else "Enabled (ranking + thermometer)"
+        )
     elif formato == FormatoLeilao.INGLES_REDUZIDO:
-        visibilidade = "Disabled (ranking only)"
+        visibilidade = (
+            "Desativado (apenas ranking)" if lang == "pt"
+            else "Disabled (ranking only)"
+        )
     else:
         visibilidade = None
 
@@ -1111,7 +1167,7 @@ def recomendar(inp: InputLeilao) -> Recomendacao:
     referencias = gerar_referencias(formato)
 
     # 6) Justificativa em linguagem natural
-    justificativa = _gerar_justificativa(formato, inp, scores, parametros)
+    justificativa = _gerar_justificativa(formato, inp, scores, parametros, lang=lang)
 
     return Recomendacao(
         formato=formato,
@@ -1129,6 +1185,7 @@ def _gerar_justificativa(
     inp: InputLeilao,
     scores: dict[FormatoLeilao, float],
     parametros: ParametrosOtimizados,
+    lang: str = "en",
 ) -> str:
     """
     Gera justificativa em linguagem natural para a recomendação.
@@ -1136,22 +1193,43 @@ def _gerar_justificativa(
     (em prompt_engine.py) a complementará com profundidade.
     """
     partes: list[str] = []
+    _is_pt = lang == "pt"
 
-    _fmt_en = {
-        "Inglês Reverso — Ranking + Termômetro": "English Reverse — Ranking + Thermometer",
-        "Inglês Reverso — Apenas Ranking":        "English Reverse — Ranking Only",
-        "Holandês Reverso":                        "Dutch Reverse",
-        "Japonês Reverso":                         "Japanese Reverse",
-        "Não fazer leilão":                        "Do not auction",
+    _fmt_label = {
+        "Inglês Reverso — Ranking + Termômetro": (
+            "English Reverse — Ranking + Termômetro" if _is_pt
+            else "English Reverse — Ranking + Thermometer"
+        ),
+        "Inglês Reverso — Apenas Ranking": (
+            "English Reverse — Apenas Ranking" if _is_pt
+            else "English Reverse — Ranking Only"
+        ),
+        "Holandês Reverso": "Dutch Reverse",
+        "Japonês Reverso":  "Japanese Reverse",
+        "Não fazer leilão": "Não fazer leilão" if _is_pt else "Do not auction",
     }
-    partes.append(
-        f"Recommendation: {_fmt_en.get(formato.value, formato.value)} for this scenario "
-        f"with {inp.num_fornecedores} qualified supplier(s) and a "
-        f"price spread of {inp.dispersao_precos}%."
-    )
+
+    if _is_pt:
+        partes.append(
+            f"Recomendação: {_fmt_label.get(formato.value, formato.value)} para este cenário "
+            f"com {inp.num_fornecedores} fornecedor(es) qualificado(s) e "
+            f"dispersão de preços de {inp.dispersao_precos}%."
+        )
+    else:
+        partes.append(
+            f"Recommendation: {_fmt_label.get(formato.value, formato.value)} for this scenario "
+            f"with {inp.num_fornecedores} qualified supplier(s) and a "
+            f"price spread of {inp.dispersao_precos}%."
+        )
 
     if formato == FormatoLeilao.INGLES_COMPLETO:
         partes.append(
+            "O English Reverse com ranking e termômetro é recomendado porque o campo de "
+            "fornecedores é grande o suficiente para gerar competição dinâmica real. "
+            "O termômetro amplifica a pressão psicológica — cada fornecedor sente a "
+            "'temperatura' da competição e tende a licitar de forma mais agressiva. "
+            "A regra de prorrogação automática garante que o saving seja extraído até o último lance possível."
+            if _is_pt else
             "English Reverse with ranking and thermometer is recommended because "
             "the supplier field is large enough to generate real dynamic competition. "
             "The thermometer amplifies psychological pressure — each supplier feels "
@@ -1161,6 +1239,12 @@ def _gerar_justificativa(
 
     elif formato == FormatoLeilao.INGLES_REDUZIDO:
         partes.append(
+            "O English Reverse somente com ranking (sem termômetro) é recomendado porque, "
+            "embora a competição seja suficiente, o cenário apresenta risco moderado de que "
+            "os fornecedores usem o termômetro para calibrar o mínimo exato necessário para vencer. "
+            "Remover o termômetro preserva a pressão competitiva do ranking "
+            "ao mesmo tempo que reduz a capacidade dos fornecedores de 'ler' seus concorrentes."
+            if _is_pt else
             "English Reverse with ranking only (no thermometer) is recommended because, "
             "while competition is sufficient, the scenario presents a moderate risk that "
             "suppliers would use the thermometer to calibrate the exact minimum needed to win. "
@@ -1170,6 +1254,12 @@ def _gerar_justificativa(
 
     elif formato == FormatoLeilao.HOLANDES:
         partes.append(
+            "O Dutch Reverse é recomendado porque o cenário apresenta poucos participantes "
+            "e/ou alto risco de conluio. No Dutch, cada fornecedor decide de forma completamente "
+            "independente — é o formato de maior opacidade disponível no Coupa, "
+            "funcionando na prática como um lance selado. O comprador controla o ritmo "
+            "e o primeiro fornecedor a aceitar vence, encerrando o leilão imediatamente."
+            if _is_pt else
             "Dutch Reverse is recommended because the scenario features few participants "
             "and/or high collusion risk. In Dutch, each supplier decides completely "
             "independently — it is the highest-opacity format available on Coupa, "
@@ -1178,27 +1268,49 @@ def _gerar_justificativa(
         )
 
     elif formato == FormatoLeilao.JAPONES:
-        partes.append(
-            "Japanese Reverse is recommended because the supplier field is large "
-            "and the item is highly commoditized. Progressive elimination solves the "
-            "passivity problem — suppliers who do not actively accept each round are "
-            f"eliminated. With ~{parametros.rodadas_estimadas} estimated rounds, the format "
-            f"converges naturally to the supplier with the lowest real cost."
-        )
+        if _is_pt:
+            partes.append(
+                "O Japanese Reverse é recomendado porque o campo de fornecedores é grande "
+                "e o item é altamente comoditizado. A eliminação progressiva resolve o "
+                "problema de passividade — fornecedores que não aceitam ativamente cada rodada são "
+                f"eliminados. Com ~{parametros.rodadas_estimadas} rodadas estimadas, o formato "
+                f"converge naturalmente para o fornecedor com o menor custo real."
+            )
+        else:
+            partes.append(
+                "Japanese Reverse is recommended because the supplier field is large "
+                "and the item is highly commoditized. Progressive elimination solves the "
+                "passivity problem — suppliers who do not actively accept each round are "
+                f"eliminated. With ~{parametros.rodadas_estimadas} estimated rounds, the format "
+                f"converges naturally to the supplier with the lowest real cost."
+            )
 
     # Runner-up: concrete reason why recommended beats it
     ranking = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     segundo = ranking[1]
-    _runner_reason = {
-        FormatoLeilao.INGLES_COMPLETO: "also viable but thermometer increases calibration risk with this supplier profile",
-        FormatoLeilao.INGLES_REDUZIDO: "also viable but lacks the elimination pressure that best fits this field size",
-        FormatoLeilao.HOLANDES: "also viable but loses the progressive price-discovery advantage needed here",
-        FormatoLeilao.JAPONES: "also viable but takes more rounds to converge and may exceed available time",
-    }
-    partes.append(
-        f"Alternative considered: {_fmt_en.get(segundo[0].value, segundo[0].value)} — "
-        f"{_runner_reason.get(segundo[0], 'also a viable format for this scenario')}."
-    )
+
+    if _is_pt:
+        _runner_reason_pt = {
+            FormatoLeilao.INGLES_COMPLETO: "também viável, mas o termômetro aumenta o risco de calibração com este perfil de fornecedores",
+            FormatoLeilao.INGLES_REDUZIDO: "também viável, mas sem a pressão de eliminação que melhor se adapta a este tamanho de campo",
+            FormatoLeilao.HOLANDES: "também viável, mas perde a vantagem de descoberta de preço progressiva necessária aqui",
+            FormatoLeilao.JAPONES: "também viável, mas leva mais rodadas para convergir e pode exceder o tempo disponível",
+        }
+        partes.append(
+            f"Alternativa considerada: {_fmt_label.get(segundo[0].value, segundo[0].value)} — "
+            f"{_runner_reason_pt.get(segundo[0], 'também um formato viável para este cenário')}."
+        )
+    else:
+        _runner_reason_en = {
+            FormatoLeilao.INGLES_COMPLETO: "also viable but thermometer increases calibration risk with this supplier profile",
+            FormatoLeilao.INGLES_REDUZIDO: "also viable but lacks the elimination pressure that best fits this field size",
+            FormatoLeilao.HOLANDES: "also viable but loses the progressive price-discovery advantage needed here",
+            FormatoLeilao.JAPONES: "also viable but takes more rounds to converge and may exceed available time",
+        }
+        partes.append(
+            f"Alternative considered: {_fmt_label.get(segundo[0].value, segundo[0].value)} — "
+            f"{_runner_reason_en.get(segundo[0], 'also a viable format for this scenario')}."
+        )
 
     return " ".join(partes)
 

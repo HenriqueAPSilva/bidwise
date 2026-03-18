@@ -10,6 +10,13 @@ import streamlit as st
 
 import exportador
 from exportador import draw_uncertainty_chart
+from i18n import (
+    BEHAVIOR_OPTIONS,
+    COMMODITIZATION_OPTIONS,
+    INTEREST_OPTIONS,
+    KRALJIC_OPTIONS,
+    t,
+)
 from motor import (
     Comportamento,
     Fornecedor,
@@ -32,55 +39,86 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ──────────────────────────────────────────────────────────────────────
+# SIDEBAR VISIBILITY — inject before any rendering
+# ──────────────────────────────────────────────────────────────────────
+
+if st.session_state.get("sidebar_hidden", False):
+    st.markdown(
+        '<style>[data-testid="stSidebar"] {display: none;}</style>',
+        unsafe_allow_html=True,
+    )
+
+# ──────────────────────────────────────────────────────────────────────
+# LANGUAGE SELECTION — must happen before any t() calls
+# ──────────────────────────────────────────────────────────────────────
+
+_lang_raw = st.sidebar.radio(
+    "🌐",
+    ["EN", "PT-BR"],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="lang_selector",
+)
+lang: str = "pt" if _lang_raw == "PT-BR" else "en"
+
 st.markdown("""<style>
 [data-testid="stSidebar"] {min-width: 420px; max-width: 420px;}
+@media (max-width: 1080px) {
+    [data-testid="stSidebar"] {
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+        z-index: 999;
+        position: fixed;
+        left: 0;
+        top: 0;
+    }
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        display: none !important;
+    }
+    section[data-testid="stMain"] {
+        margin-left: 0 !important;
+        width: 100vw !important;
+    }
+}
 </style>""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────
-# DROPDOWN OPTIONS — descriptive labels
+# ENUM MAPPINGS — handles both EN and PT-BR keys
 # ──────────────────────────────────────────────────────────────────────
 
-KRALJIC_OPTIONS = [
-    "Leverage — High impact, low risk",
-    "Strategic — High impact, high risk",
-    "Bottleneck — Low impact, high risk",
-    "Non-critical — Low impact, low risk",
-]
 _KRALJIC_ENUM: dict[str, QuadranteKraljic] = {
+    # EN keys
     "Leverage":     QuadranteKraljic.ALAVANCA,
     "Strategic":    QuadranteKraljic.ESTRATEGICO,
     "Bottleneck":   QuadranteKraljic.GARGALO,
     "Non-critical": QuadranteKraljic.NAO_CRITICO,
+    # PT-BR keys
+    "Alavanca":     QuadranteKraljic.ALAVANCA,
+    "Estratégico":  QuadranteKraljic.ESTRATEGICO,
+    "Gargalo":      QuadranteKraljic.GARGALO,
+    "Não crítico":  QuadranteKraljic.NAO_CRITICO,
 }
 
-COMOD_OPTIONS = [
-    "High — Standard specs, many suppliers",
-    "Medium — Some differentiation, limited alternatives",
-    "Low — Custom/proprietary, few substitutes",
-]
 _COMOD_ENUM: dict[str, NivelTripartido] = {
-    "High":   NivelTripartido.ALTO,
-    "Medium": NivelTripartido.MEDIO,
-    "Low":    NivelTripartido.BAIXO,
+    "High": NivelTripartido.ALTO,   "Medium": NivelTripartido.MEDIO,  "Low": NivelTripartido.BAIXO,
+    "Alto": NivelTripartido.ALTO,   "Médio":  NivelTripartido.MEDIO,  "Baixo": NivelTripartido.BAIXO,
 }
 
-
-BEHAVIOR_OPTIONS = [
-    "Competitive — Bids aggressively, responds to pressure",
-    "Moderate — Calculated bids, doesn't overextend",
-    "Conservative — Risk-averse, may withdraw if pushed",
-]
 _BEHAVIOR_ENUM: dict[str, Comportamento] = {
     "Competitive":  Comportamento.COMPETITIVO,
     "Moderate":     Comportamento.MODERADO,
     "Conservative": Comportamento.CONSERVADOR,
+    "Competitivo":  Comportamento.COMPETITIVO,
+    "Moderado":     Comportamento.MODERADO,
+    "Conservador":  Comportamento.CONSERVADOR,
 }
 
-INTEREST_OPTIONS = [
-    "High — Wants contract for future revenue, will bid hard",
-    "Medium — Interested but not dependent on winning",
-    "Low — Indifferent, may not bid actively",
-]
+_INTEREST_ENUM_FULL: dict[str, NivelTripartido] = {
+    "High": NivelTripartido.ALTO,   "Medium": NivelTripartido.MEDIO,  "Low": NivelTripartido.BAIXO,
+    "Alto": NivelTripartido.ALTO,   "Médio":  NivelTripartido.MEDIO,  "Baixo": NivelTripartido.BAIXO,
+}
 
 
 def _extract_key(label: str) -> str:
@@ -116,12 +154,32 @@ FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
     FormatoLeilao.NAO_LEILAO:      "Do Not Auction",
 }
 
+FORMAT_LABEL_PT: dict[FormatoLeilao, str] = {
+    FormatoLeilao.INGLES_COMPLETO: "English Reverse — Ranking + Termômetro",
+    FormatoLeilao.INGLES_REDUZIDO: "English Reverse — Apenas Ranking",
+    FormatoLeilao.HOLANDES:        "Dutch Reverse",
+    FormatoLeilao.JAPONES:         "Japanese Reverse",
+    FormatoLeilao.NAO_LEILAO:      "Não Fazer Leilão",
+}
+
 MECH_LABEL_EN: dict[str, str] = {
     "RFQ com negociação posterior":                "RFQ with subsequent negotiation",
     "Nova rodada de qualificação + RFQ":           "New qualification round + RFQ",
     "Negociação direta com fornecedor":            "Direct negotiation with supplier",
     "Contrato guarda-chuva com revisão periódica": "Umbrella contract with periodic review",
 }
+
+
+def _format_label(fmt: FormatoLeilao, lang: str) -> str:
+    if lang == "pt":
+        return FORMAT_LABEL_PT[fmt]
+    return FORMAT_LABEL_EN[fmt]
+
+
+def _mech_label(mec_value: str, lang: str) -> str:
+    if lang == "pt":
+        return mec_value  # already in PT
+    return MECH_LABEL_EN.get(mec_value, mec_value)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -228,22 +286,38 @@ st.markdown(
 # ──────────────────────────────────────────────────────────────────────
 
 st.markdown(
-    '<div style="background-color:#1a1a2e;color:white;padding:8px 16px;text-align:center;'
-    'font-size:14px;border-radius:4px;margin-bottom:16px;">'
-    '🔒 No cookies · No tracking · No data stored · Your scenarios exist only in your active session'
-    '</div>',
+    f'<div style="background-color:#1a1a2e;color:white;padding:8px 16px;text-align:center;'
+    f'font-size:14px;border-radius:4px;margin-bottom:16px;">'
+    f'{t("privacy_bar", lang)}'
+    f'</div>',
     unsafe_allow_html=True,
 )
 
-tab_main, tab_about = st.tabs(["Auction Advisor", "About BidWise"])
+tab_main, tab_about = st.tabs([t("tab_advisor", lang), t("tab_about", lang)])
+
+if st.session_state.pop("show_about", False):
+    st.markdown(
+        """<script>
+        (function() {
+            const tabs = window.parent.document.querySelectorAll('button[role="tab"]');
+            if (tabs.length >= 2) tabs[1].click();
+        })();
+        </script>""",
+        unsafe_allow_html=True,
+    )
 
 # ══════════════════════════════════════════════════════════════════════
 # ABOUT TAB
 # ══════════════════════════════════════════════════════════════════════
 
 with tab_about:
-    with open("about.md", encoding="utf-8") as _f:
-        st.markdown(_f.read())
+    _about_file = "about_pt.md" if lang == "pt" else "about.md"
+    try:
+        with open(_about_file, encoding="utf-8") as _f:
+            st.markdown(_f.read())
+    except FileNotFoundError:
+        with open("about.md", encoding="utf-8") as _f:
+            st.markdown(_f.read())
 
 # ══════════════════════════════════════════════════════════════════════
 # MAIN TAB — AUCTION ADVISOR
@@ -251,21 +325,29 @@ with tab_about:
 
 with tab_main:
 
+    # ── Return button — always visible when sidebar is hidden ─────────
+    if st.session_state.get("sidebar_hidden", False) or st.session_state.get("sidebar_collapsed", False):
+        if st.button(t("configure_scenario", lang), use_container_width=True, key="show_sidebar_again"):
+            st.session_state["sidebar_hidden"] = False
+            st.session_state["sidebar_collapsed"] = False
+            st.session_state["show_about"] = False
+            st.rerun()
+
     # ──────────────────────────────────────────────────────────────────
     # HEADER
     # ──────────────────────────────────────────────────────────────────
 
     st.markdown(
-        """
+        f"""
         <div style="padding-bottom: 4px;">
             <span style="font-size:2.4rem; font-weight:800; color:#F0E68C;">🔨 BidWise</span>
             &nbsp;
             <span style="font-size:1.1rem; color:#374151; font-weight:500;">
-                Reverse Auction Strategy Advisor
+                {"Consultor de Estratégia de Leilão Reverso" if lang == "pt" else "Reverse Auction Strategy Advisor"}
             </span>
         </div>
         <div style="color:#6B7280; font-size:0.88rem; margin-bottom:1rem;">
-            Powered by auction theory &amp; Coupa platform rules
+            {t("tagline", lang)}
         </div>
         """,
         unsafe_allow_html=True,
@@ -276,94 +358,91 @@ with tab_main:
     # ──────────────────────────────────────────────────────────────────
 
     with st.sidebar:
-        st.markdown("### Configure your auction")
+        if "last_rec" in st.session_state:
+            if st.button(t("view_report", lang), use_container_width=True, key="view_report_top"):
+                st.session_state["sidebar_hidden"] = True
+                st.rerun()
+        else:
+            st.info(t("sidebar_no_analysis_tip", lang))
+            if st.button(t("about_from_sidebar", lang), use_container_width=True, key="about_from_sidebar"):
+                st.session_state["sidebar_hidden"] = True
+                st.session_state["show_about"] = True
+                st.rerun()
+
+        st.markdown(f"### {t('sidebar_title', lang)}")
 
         # ── Auction context ──────────────────────────────────────────
         kraljic_label = st.selectbox(
-            "Kraljic quadrant",
-            options=KRALJIC_OPTIONS,
-            index=0,  # Leverage
-            help=(
-                "Position of this item on the Kraljic matrix. "
-                "Leverage items (high spend, many suppliers) are the best auction candidates. "
-                "Strategic items carry supply-continuity risk — auction with caution. "
-                "Bottleneck items have few substitutes and respond poorly to price pressure. "
-                "Non-critical items have low strategic relevance."
-            ),
+            t("kraljic", lang),
+            options=KRALJIC_OPTIONS[lang],
+            index=st.session_state.get("_kq_idx", 0),
+            help=t("kraljic_help", lang),
         )
+        st.session_state["_kq_idx"] = KRALJIC_OPTIONS[lang].index(kraljic_label)
 
         comod_label = st.selectbox(
-            "Item commoditization",
-            options=COMOD_OPTIONS,
-            index=0,  # High
-            help=(
-                "How interchangeable this item is across suppliers. "
-                "High: standard spec, any qualified supplier can deliver identically — "
-                "auctions work best here. "
-                "Medium: some differentiation exists but alternatives are available. "
-                "Low: custom or proprietary spec — price comparison may be misleading."
-            ),
+            t("commoditization", lang),
+            options=COMMODITIZATION_OPTIONS[lang],
+            index=st.session_state.get("_cm_idx", 0),
+            help=t("commoditization_help", lang),
         )
+        st.session_state["_cm_idx"] = COMMODITIZATION_OPTIONS[lang].index(comod_label)
 
         st.divider()
 
         # ── Supplier profiles ────────────────────────────────────────
-        st.markdown("#### Supplier profiles")
+        st.markdown(f"#### {t('supplier_profiles', lang)}")
         n_suppliers = st.number_input(
-            "Number of qualified suppliers",
+            t("num_suppliers", lang),
             min_value=1,
             max_value=15,
             value=4,
             step=1,
-            help="Total suppliers invited and qualified to participate.",
+            key="num_suppliers",
+            help=t("num_suppliers_help", lang),
         )
 
+        _sup_default_prefix = "Fornecedor" if lang == "pt" else "Supplier"
         _supplier_inputs: list[dict] = []
         for _i in range(int(n_suppliers)):
-            _default_name = f"Supplier {chr(65 + _i)}"  # A, B, C, ...
+            _default_name = f"{_sup_default_prefix} {chr(65 + _i)}"  # A, B, C, ...
             with st.expander(_default_name, expanded=(_i == 0)):
                 _name = st.text_input(
-                    "Name",
+                    t("name", lang),
                     value=_default_name,
                     key=f"sup_name_{_i}",
                 )
                 _prop = st.number_input(
-                    "Proposal value ($)",
+                    t("proposal", lang),
                     min_value=0.0,
                     value=0.0,
                     step=1_000.0,
                     format="%.2f",
                     key=f"sup_prop_{_i}",
-                    help=(
-                        "Enter the equalized proposal value from the prior quotation round "
-                        "(RFQ/RFP). All calculations are performed locally in your browser "
-                        "— no data is transmitted."
-                    ),
+                    help=t("proposal_help", lang),
                 )
+                # Correct stored option string when language changes
+                _int_opts = INTEREST_OPTIONS[lang]
+                if st.session_state.get(f"sup_int_{_i}") not in _int_opts:
+                    st.session_state[f"sup_int_{_i}"] = _int_opts[st.session_state.get(f"_si_idx_{_i}", 1)]
                 _int_label = st.selectbox(
-                    "Strategic interest",
-                    options=INTEREST_OPTIONS,
-                    index=1,  # Medium
+                    t("interest", lang),
+                    options=_int_opts,
                     key=f"sup_int_{_i}",
-                    help=(
-                        "How much this supplier needs this contract. "
-                        "High: strategic account for them — they will bid hard to win. "
-                        "Medium: interested but winning is not critical. "
-                        "Low: indifferent — may not bid actively or may withdraw."
-                    ),
+                    help=t("interest_help", lang),
                 )
+                st.session_state[f"_si_idx_{_i}"] = _int_opts.index(_int_label)
+
+                _beh_opts = BEHAVIOR_OPTIONS[lang]
+                if st.session_state.get(f"sup_beh_{_i}") not in _beh_opts:
+                    st.session_state[f"sup_beh_{_i}"] = _beh_opts[st.session_state.get(f"_sb_idx_{_i}", 1)]
                 _beh_label = st.selectbox(
-                    "Behavior",
-                    options=BEHAVIOR_OPTIONS,
-                    index=1,  # Moderate
+                    t("behavior", lang),
+                    options=_beh_opts,
                     key=f"sup_beh_{_i}",
-                    help=(
-                        "Expected bidding style based on past interactions or market knowledge. "
-                        "Competitive: bids aggressively and responds quickly to being outbid. "
-                        "Moderate: calculated approach, bids when meaningful moves are available. "
-                        "Conservative: risk-averse, may withdraw if the auction gets too aggressive."
-                    ),
+                    help=t("behavior_help", lang),
                 )
+                st.session_state[f"_sb_idx_{_i}"] = _beh_opts.index(_beh_label)
                 _supplier_inputs.append({
                     "name":     _name,
                     "proposal": _prop,
@@ -373,16 +452,18 @@ with tab_main:
 
         _props_entered = [s for s in _supplier_inputs if s["proposal"] > 0]
         if len(_props_entered) < 2:
-            st.info(
-                "Tip: Enter at least 2 supplier proposals for a more accurate "
-                "spread calculation."
-            )
+            st.info(t("tip_min_proposals", lang))
 
-        analyze = st.button("Analyze", type="primary", use_container_width=True)
-        if st.button("🔄 Reset", type="secondary", use_container_width=True):
+        analyze = st.button(t("analyze", lang), type="primary", use_container_width=True)
+        if st.button(t("reset", lang), type="secondary", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
+
+        if "last_rec" in st.session_state:
+            if st.button(t("view_report", lang), use_container_width=True, key="view_report_bottom"):
+                st.session_state["sidebar_hidden"] = True
+                st.rerun()
 
     # ──────────────────────────────────────────────────────────────────
     # SESSION STATE INIT
@@ -397,18 +478,12 @@ with tab_main:
     # MAIN LOGIC — run when Analyze clicked
     # ──────────────────────────────────────────────────────────────────
 
-    _INTEREST_ENUM: dict[str, NivelTripartido] = {
-        "High":   NivelTripartido.ALTO,
-        "Medium": NivelTripartido.MEDIO,
-        "Low":    NivelTripartido.BAIXO,
-    }
-
     if analyze:
         _fornecedores = [
             Fornecedor(
                 nome=s["name"],
                 proposta_brl=s["proposal"] if s["proposal"] > 0 else None,
-                interesse_estrategico=_INTEREST_ENUM[s["interest"]],
+                interesse_estrategico=_INTEREST_ENUM_FULL[s["interest"]],
                 comportamento=_BEHAVIOR_ENUM[s["behavior"]],
             )
             for s in _supplier_inputs
@@ -420,8 +495,8 @@ with tab_main:
             comoditizacao=_COMOD_ENUM[_extract_key(comod_label)],
         )
 
-        rec = recomendar(inp)
-        sim = simular(inp, rec)
+        rec = recomendar(inp, lang=lang)
+        sim = simular(inp, rec, lang=lang)
 
         st.session_state.last_inp = inp
         st.session_state.last_rec = rec
@@ -429,9 +504,7 @@ with tab_main:
 
     # Gate: show prompt if no analysis yet
     if "last_rec" not in st.session_state:
-        st.info(
-            "Configure your auction parameters in the sidebar and click **Analyze** to get started."
-        )
+        st.info(t("get_started", lang))
         st.stop()
 
     inp = st.session_state.last_inp
@@ -439,9 +512,7 @@ with tab_main:
     sim = st.session_state.last_sim
 
     if inp.dispersao_precos > 50:
-        st.warning(
-            "⚠️ Price spread exceeds 50%. Consider reviewing equalization data for outliers."
-        )
+        st.warning(t("spread_warning", lang))
 
     # ──────────────────────────────────────────────────────────────────
     # 1. RECOMMENDATION CARD
@@ -454,21 +525,18 @@ with tab_main:
     if fmt == FormatoLeilao.NAO_LEILAO:
         with st.container(border=True):
             st.error(
-                f"**{fmt_emoji} {FORMAT_LABEL_EN[fmt]}**\n\n"
+                f"**{fmt_emoji} {_format_label(fmt, lang)}**\n\n"
                 f"{rec.alerta_nao_leilao.explicacao if rec.alerta_nao_leilao else rec.justificativa}",
                 icon="🚫",
             )
             if rec.alerta_nao_leilao:
-                mech_en = MECH_LABEL_EN.get(
-                    rec.alerta_nao_leilao.mecanismo_sugerido.value,
-                    rec.alerta_nao_leilao.mecanismo_sugerido.value,
-                )
-                st.markdown(f"**Suggested mechanism:** {mech_en}")
+                mec_display = _mech_label(rec.alerta_nao_leilao.mecanismo_sugerido.value, lang)
+                st.markdown(f"**{t('suggested_mechanism', lang)}** {mec_display}")
     else:
         with st.container(border=True):
             st.markdown(
                 f"<h2 style='color:{fmt_color}; margin-bottom:0;'>"
-                f"{fmt_emoji} {FORMAT_LABEL_EN[fmt]}</h2>",
+                f"{fmt_emoji} {_format_label(fmt, lang)}</h2>",
                 unsafe_allow_html=True,
             )
             st.markdown(rec.justificativa)
@@ -487,35 +555,31 @@ with tab_main:
 
     if rec.parametros and fmt != FormatoLeilao.NAO_LEILAO and not _is_english:
         _bidwise_pct = rec.parametros.preco_abertura_pct
+        _op_suggestion = t("opening_suggestion", lang).format(pct=_bidwise_pct)
         _op_options = [
-            f"Use BidWise suggestion ({_bidwise_pct:+.1f}% vs. best proposal)",
-            "Use best proposal as ceiling (0% adjustment)",
-            "Custom adjustment",
+            _op_suggestion,
+            t("opening_equalization", lang),
+            t("opening_custom", lang),
         ]
         _op_strategy = st.radio(
-            "Opening price strategy",
+            t("opening_strategy", lang),
             options=_op_options,
             index=0,
             horizontal=True,
-            help=(
-                "BidWise suggestion uses format-specific formulas. "
-                "Custom lets you set any adjustment vs. the best proposal."
-            ),
         )
 
-        if "ceiling" in _op_strategy.lower():
+        _is_ceiling = _op_strategy == t("opening_equalization", lang)
+        _is_custom = _op_strategy == t("opening_custom", lang)
+
+        if _is_ceiling:
             if inp.melhor_proposta_brl is not None:
                 _eff_abertura_pct = 0.0
                 _eff_abertura_brl = inp.melhor_proposta_brl
             else:
-                st.warning(
-                    "Ceiling option requires at least one supplier proposal with a value. "
-                    "Using BidWise suggestion instead.",
-                    icon="⚠️",
-                )
-        elif "custom" in _op_strategy.lower():
+                st.warning(t("opening_ceiling_warning", lang), icon="⚠️")
+        elif _is_custom:
             _custom_pct = st.slider(
-                "Custom opening price (% vs. best proposal)",
+                t("opening_custom_label", lang),
                 min_value=-20,
                 max_value=10,
                 value=int(_bidwise_pct) if _bidwise_pct else -5,
@@ -534,72 +598,76 @@ with tab_main:
     # ──────────────────────────────────────────────────────────────────
 
     if rec.parametros and fmt != FormatoLeilao.NAO_LEILAO:
-        st.subheader("Optimized Parameters")
+        st.subheader(t("optimized_params", lang))
         p = rec.parametros
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             brl_str = f"$ {p.decremento_min_brl:,.0f}" if p.decremento_min_brl else None
-            st.metric("Min. Decrement", f"{p.decremento_min_pct:.2f}%", delta=brl_str)
+            st.metric(t("min_decrement", lang), f"{p.decremento_min_pct:.2f}%", delta=brl_str)
         with c2:
             ap_brl_str = f"$ {_eff_abertura_brl:,.0f}" if _eff_abertura_brl else None
             if _is_english:
-                ap_pct_str = "Best Response"
+                ap_pct_str = t("best_response", lang)
             elif _eff_abertura_pct is not None:
                 ap_pct_str = f"{_eff_abertura_pct:+.1f}%"
             else:
                 ap_pct_str = "—"
-            st.metric("Opening", ap_pct_str, delta=ap_brl_str)
+            st.metric(t("opening_price", lang), ap_pct_str, delta=ap_brl_str)
         with c3:
-            ext_str = f"+{p.prorrogacao_minutos} min auto-ext." if p.prorrogacao_minutos else None
-            st.metric("Duration", f"{p.duracao_minutos} min", delta=ext_str)
+            ext_str = t("auto_ext_delta", lang).format(mins=p.prorrogacao_minutos) if p.prorrogacao_minutos else None
+            st.metric(t("duration", lang), f"{p.duracao_minutos} min", delta=ext_str)
         with c4:
             if p.rodadas_estimadas:
                 st.metric(
-                    "Est. Rounds", f"~{p.rodadas_estimadas}",
+                    t("est_rounds", lang), f"~{p.rodadas_estimadas}",
                     delta=f"{p.intervalo_rodada_minutos} min / round" if p.intervalo_rodada_minutos else None,
                 )
             elif p.incremento_holandes_pct:
                 inc_brl = f"$ {p.incremento_holandes_brl:,.0f}/tick" if p.incremento_holandes_brl else None
-                st.metric("Dutch Increment", f"{p.incremento_holandes_pct:.2f}%/tick", delta=inc_brl)
+                st.metric(t("dutch_increment", lang), f"{p.incremento_holandes_pct:.2f}%/tick", delta=inc_brl)
             elif p.visibilidade:
-                enabled = "Enabled" if "Enabled" in p.visibilidade else "Disabled"
-                st.metric("Thermometer", enabled)
+                _is_enabled = "Enabled" in p.visibilidade or "Ativado" in p.visibilidade
+                enabled_str = ("Ativado" if lang == "pt" else "Enabled") if _is_enabled else ("Desativado" if lang == "pt" else "Disabled")
+                st.metric(t("thermometer", lang), enabled_str)
 
-        _opening_label = "Opening price"
         if _is_english:
-            _opening_val = "Best Response"
-            _opening_brl = "Suppliers enter with equalized prices"
+            _opening_val = t("best_response", lang)
+            _opening_brl = t("best_response_note", lang)
         else:
             _opening_val = f"{_eff_abertura_pct:+.1f}%" if _eff_abertura_pct is not None else "—"
             _opening_brl = _fmt_brl(_eff_abertura_brl)
 
         rows = [
-            ("Minimum decrement", f"{p.decremento_min_pct:.2f}%", _fmt_brl(p.decremento_min_brl)),
-            (_opening_label, _opening_val, _opening_brl),
-            ("Auction duration", f"{p.duracao_minutos} min", "—"),
+            (t("min_decrement_param", lang), f"{p.decremento_min_pct:.2f}%", _fmt_brl(p.decremento_min_brl)),
+            (t("opening_label", lang), _opening_val, _opening_brl),
+            (t("duration_param", lang), f"{p.duracao_minutos} min", "—"),
         ]
         if p.prorrogacao_minutos:
             rows.append((
-                f"Auto-extension (if bid in last {p.prorrogacao_trigger_minutos} min)",
+                t("auto_ext_param", lang).format(trigger=p.prorrogacao_trigger_minutos),
                 f"+{p.prorrogacao_minutos} min", "—",
             ))
         if p.visibilidade:
-            rows.append(("Thermometer visibility", p.visibilidade, "—"))
+            rows.append((t("thermometer_param", lang), p.visibilidade, "—"))
         if p.rodadas_estimadas:
             rows.append((
-                f"Estimated rounds ({p.intervalo_rodada_minutos} min each)",
+                t("rounds_param", lang).format(interval=p.intervalo_rodada_minutos),
                 f"~{p.rodadas_estimadas}", "—",
             ))
         if p.incremento_holandes_pct:
             rows.append((
-                "Dutch increment per tick",
+                t("dutch_increment_param", lang),
                 f"{p.incremento_holandes_pct:.2f}%",
                 _fmt_brl(p.incremento_holandes_brl),
             ))
 
         st.dataframe(
-            pd.DataFrame(rows, columns=["Parameter", "Value (%)", "Value ($)"]),
+            pd.DataFrame(rows, columns=[
+                t("param_col_parameter", lang),
+                t("param_col_value_pct", lang),
+                t("param_col_value_brl", lang),
+            ]),
             use_container_width=True,
             hide_index=True,
         )
@@ -611,18 +679,18 @@ with tab_main:
 
     if rec.saving and fmt != FormatoLeilao.NAO_LEILAO:
         st.divider()
-        st.subheader("Saving Estimate")
+        st.subheader(t("saving_estimate", lang))
         s = rec.saving
 
         sc1, sc2, sc3 = st.columns(3)
         with sc1:
-            st.metric("Pessimistic saving", f"{s.pessimista_pct:.1f}%",
+            st.metric(t("pessimistic", lang), f"{s.pessimista_pct:.1f}%",
                       delta=_fmt_brl(s.pessimista_brl) if s.pessimista_brl else None)
         with sc2:
-            st.metric("Realistic saving", f"{s.realista_pct:.1f}%",
+            st.metric(t("realistic", lang), f"{s.realista_pct:.1f}%",
                       delta=_fmt_brl(s.realista_brl) if s.realista_brl else None)
         with sc3:
-            st.metric("Optimistic saving", f"{s.otimista_pct:.1f}%",
+            st.metric(t("optimistic", lang), f"{s.otimista_pct:.1f}%",
                       delta=_fmt_brl(s.otimista_brl) if s.otimista_brl else None)
 
         if inp.melhor_proposta_brl:
@@ -631,7 +699,7 @@ with tab_main:
             with cp1:
                 close_pess = round(best * (1 - s.pessimista_pct / 100), 2)
                 st.metric(
-                    "Projected close (pessimistic)",
+                    t("projected_close_pessimistic", lang),
                     _fmt_brl(close_pess),
                     delta=f"−{_fmt_brl(s.pessimista_brl)}" if s.pessimista_brl else None,
                     delta_color="inverse",
@@ -639,7 +707,7 @@ with tab_main:
             with cp2:
                 close_real = round(best * (1 - s.realista_pct / 100), 2)
                 st.metric(
-                    "Projected close (realistic)",
+                    t("projected_close_realistic", lang),
                     _fmt_brl(close_real),
                     delta=f"−{_fmt_brl(s.realista_brl)}" if s.realista_brl else None,
                     delta_color="inverse",
@@ -647,7 +715,7 @@ with tab_main:
             with cp3:
                 close_otim = round(best * (1 - s.otimista_pct / 100), 2)
                 st.metric(
-                    "Projected close (optimistic)",
+                    t("projected_close_optimistic", lang),
                     _fmt_brl(close_otim),
                     delta=f"−{_fmt_brl(s.otimista_brl)}" if s.otimista_brl else None,
                     delta_color="inverse",
@@ -660,16 +728,14 @@ with tab_main:
             st.pyplot(_fig, use_container_width=True)
             plt.close(_fig)
         else:
-            st.caption(
-                "Enter supplier proposal values to see the uncertainty projection chart."
-            )
+            st.caption(t("chart_no_data", lang))
 
         # PDF button below chart
-        pdf_bytes = exportador.gerar_pdf(inp, rec, sim)
+        pdf_bytes = exportador.gerar_pdf(inp, rec, sim, lang=lang)
         _pdf_col, _ = st.columns([1, 3])
         with _pdf_col:
             st.download_button(
-                label="📄 Download PDF",
+                label=t("download_pdf", lang),
                 data=pdf_bytes,
                 file_name="bidwise_report.pdf",
                 mime="application/pdf",
@@ -678,26 +744,26 @@ with tab_main:
             )
 
         # Specific disclaimer
-        st.caption(
-            f"Estimates based on {FORMAT_LABEL_EN[fmt]} dynamics with "
-            f"{inp.num_fornecedores} suppliers and {inp.dispersao_precos:.1f}% price spread. "
-            f"Actual results depend on market conditions and real-time supplier behavior."
-        )
+        st.caption(t("disclaimer_template", lang).format(
+            format=_format_label(fmt, lang),
+            n=inp.num_fornecedores,
+            spread=inp.dispersao_precos,
+        ))
 
     # ──────────────────────────────────────────────────────────────────
     # 4. SUPPLIER BEHAVIOR SIMULATION
     # ──────────────────────────────────────────────────────────────────
 
     st.divider()
-    st.subheader("Supplier Behavior Simulation")
+    st.subheader(t("simulation", lang))
 
     if fmt != FormatoLeilao.NAO_LEILAO and sim.fornecedores:
         # ── Archetype cards (stacked, one per archetype present) ──────
         _ARQ_DESC = {
-            "Aggressive Leader":  "Bids early and aggressively to discourage competitors",
-            "Cautious Follower":  "Watches ranking, activates in the final sprint",
-            "Floor-setter":       "Marks initial position without revealing true price floor",
-            "Dropout Candidate":  "Conservative or low interest — likely to withdraw early",
+            "Aggressive Leader":  t("archetype_aggressive", lang),
+            "Cautious Follower":  t("archetype_cautious", lang),
+            "Floor-setter":       t("archetype_floor", lang),
+            "Dropout Candidate":  t("archetype_dropout", lang),
         }
         _ARQ_ORDER = ["Aggressive Leader", "Cautious Follower", "Floor-setter", "Dropout Candidate"]
         _arq_grupos: dict[str, list[str]] = {}
@@ -726,13 +792,14 @@ with tab_main:
 
         if sim.vencedor_provavel and sim.preco_final_estimado_pct is not None:
             _saving_pct = abs(sim.preco_final_estimado_pct)
+            _vs_label = "vs. melhor preço de equalização" if lang == "pt" else "vs. best equalization price"
             _close_str = (
                 f" ({_fmt_brl(round(inp.melhor_proposta_brl * (1 - _saving_pct / 100), 2))}, "
-                f"−{_saving_pct:.1f}% vs. best equalization price)"
+                f"−{_saving_pct:.1f}% {_vs_label})"
                 if inp.melhor_proposta_brl else
-                f" (−{_saving_pct:.1f}% vs. best equalization price)"
+                f" (−{_saving_pct:.1f}% {_vs_label})"
             )
-            st.info(f"**Projected outcome:** {_close_str}")
+            st.info(f"{t('projected_outcome', lang)}{_close_str}")
 
     if sim.alertas:
         for alerta in sorted(
@@ -752,34 +819,36 @@ with tab_main:
     # ──────────────────────────────────────────────────────────────────
 
     st.divider()
-    st.subheader("Compare Scenarios")
+    st.subheader(t("compare", lang))
+
+    _scenario_default_prefix = "Cenário" if lang == "pt" else "Scenario"
 
     if len(st.session_state.scenarios) >= 3:
-        st.caption("Max 3 scenarios saved. Remove one to add more.")
+        st.caption(t("compare_max", lang))
     else:
         name_col, btn_col = st.columns([3, 1])
         with name_col:
             scenario_name = st.text_input(
                 "Scenario name",
-                placeholder="e.g., Base case, Aggressive, Conservative...",
+                placeholder=t("scenario_name_placeholder", lang),
                 label_visibility="collapsed",
                 key="scenario_name_input",
             )
         with btn_col:
-            if st.button("Save scenario", type="secondary"):
-                label = scenario_name.strip() if scenario_name.strip() else f"Scenario {len(st.session_state.scenarios) + 1}"
+            if st.button(t("save_scenario", lang), type="secondary"):
+                label = scenario_name.strip() if scenario_name.strip() else f"{_scenario_default_prefix} {len(st.session_state.scenarios) + 1}"
                 st.session_state.scenarios.append({
                     "label": label,
                     "inp":   inp,
                     "rec":   rec,
                     "sim":   sim,
                 })
-                st.success(f"'{label}' saved.")
+                st.success(t("scenario_saved", lang).format(label=label))
 
     if len(st.session_state.scenarios) == 0:
-        st.caption("Save your current scenario to compare configurations side by side.")
+        st.caption(t("compare_hint", lang))
     else:
-        if st.button("🗑️ Clear all scenarios", type="secondary"):
+        if st.button(t("clear_all", lang), type="secondary"):
             st.session_state.scenarios = []
             st.rerun()
 
@@ -793,7 +862,7 @@ with tab_main:
                 st.markdown(
                     f"<div style='border-left: 4px solid {color}; padding-left: 8px;'>"
                     f"<b>{FORMAT_EMOJI[r.formato]} {scenario['label']}</b><br>"
-                    f"<span style='color:{color}; font-size:0.9rem;'>{FORMAT_LABEL_EN[r.formato]}</span>"
+                    f"<span style='color:{color}; font-size:0.9rem;'>{_format_label(r.formato, lang)}</span>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -801,55 +870,56 @@ with tab_main:
                 if r.saving:
                     sv = r.saving
                     st.markdown(
-                        f"**Saving:** {sv.pessimista_pct:.1f}% / "
+                        f"{t('col_saving', lang)} {sv.pessimista_pct:.1f}% / "
                         f"{sv.realista_pct:.1f}% / {sv.otimista_pct:.1f}%"
                     )
                 if r.parametros:
                     p_s = r.parametros
-                    st.markdown(f"**Decrement:** {p_s.decremento_min_pct:.2f}%")
-                    st.markdown(f"**Duration:** {p_s.duracao_minutos} min")
+                    st.markdown(f"{t('col_decrement', lang)} {p_s.decremento_min_pct:.2f}%")
+                    st.markdown(f"{t('col_duration', lang)} {p_s.duracao_minutos} min")
                     if p_s.rodadas_estimadas:
-                        st.markdown(f"**Rounds:** ~{p_s.rodadas_estimadas}")
+                        st.markdown(f"{t('col_rounds', lang)} ~{p_s.rodadas_estimadas}")
                 if s_sim.preco_final_estimado_pct is not None:
+                    _vs = "vs. melhor equalização" if lang == "pt" else "vs. best equalization"
                     st.markdown(
-                        f"**Projected price:** −{abs(s_sim.preco_final_estimado_pct):.1f}% "
-                        f"vs. best equalization"
+                        f"{t('col_projected', lang)} −{abs(s_sim.preco_final_estimado_pct):.1f}% {_vs}"
                     )
 
         if n_saved == 1:
-            st.info("Save another scenario to compare side by side.", icon="💡")
+            st.info(t("compare_one_saved", lang), icon="💡")
 
     # ──────────────────────────────────────────────────────────────────
     # 6. TAKE TO AI
     # ──────────────────────────────────────────────────────────────────
 
     st.divider()
-    with st.expander("📋 Take this analysis to your preferred AI"):
+    with st.expander(t("take_to_ai", lang)):
         prompt_text = _build_copy_prompt(inp, rec, sim)
         st.code(prompt_text, language=None)
-        st.caption(
-            "Copy this prompt and paste it into any AI assistant you trust for a deeper analysis. "
-            "No data leaves your browser unless you choose to share it."
-        )
+        st.caption(t("copy_prompt_hint", lang))
 
     # ──────────────────────────────────────────────────────────────────
     # 7. THEORETICAL REFERENCES
     # ──────────────────────────────────────────────────────────────────
 
-    with st.expander("Theoretical Foundation", expanded=False):
+    with st.expander(t("theoretical", lang), expanded=False):
         if rec.referencias:
+            _ref_book  = "Livro"    if lang == "pt" else "Book"
+            _ref_auth  = "Autor"    if lang == "pt" else "Author"
+            _ref_conc  = "Conceito" if lang == "pt" else "Concept"
+            _ref_appl  = "Aplicação" if lang == "pt" else "Application"
             rows_ref = [
                 {
-                    "Book":        r.livro,
-                    "Author":      r.autor,
-                    "Concept":     r.conceito,
-                    "Application": r.aplicacao,
+                    _ref_book: r.livro,
+                    _ref_auth: r.autor,
+                    _ref_conc: r.conceito,
+                    _ref_appl: r.aplicacao,
                 }
                 for r in rec.referencias
             ]
             st.table(pd.DataFrame(rows_ref))
         else:
-            st.caption("No references available for this scenario.")
+            st.caption(t("no_references", lang))
 
     # ──────────────────────────────────────────────────────────────────
     # FOOTER
@@ -857,11 +927,11 @@ with tab_main:
 
     st.divider()
     st.markdown(
-        """
+        f"""
         <div style="text-align:center; color:#9CA3AF; font-size:0.8rem; padding-bottom:1rem;">
-            Built by <b>Henrique Silva</b> — Strategic Sourcing Analyst &nbsp;·&nbsp;
+            {t("footer_text", lang)} &nbsp;·&nbsp;
             <a href="https://github.com/HenriqueAPSilva/bidwise" style="color:#9CA3AF;">
-                github.com/HenriqueAPSilva/bidwise
+                {t("github_link", lang)}
             </a>
         </div>
         """,
