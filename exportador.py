@@ -870,21 +870,19 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
         ax.plot(i, target, marker='D', color=_C_DIAMOND, markersize=8,
                 markerfacecolor=_C_DIAMOND, zorder=5, linestyle='None')
 
-        # Alternate annotation offsets to prevent overlap when proposals are close
-        _above = i % 2 == 0
         ax.annotate(
             f"${prop:,.0f}", xy=(i, prop),
-            xytext=(8, 6 if _above else -14),
+            xytext=(0, 10),
             textcoords="offset points", fontsize=7.5,
             color=_C_ANNOT, fontweight='bold',
-            va='bottom' if _above else 'top',
+            ha='center', va='bottom',
         )
         ax.annotate(
             f"${target:,.0f}", xy=(i, target),
-            xytext=(8, -6 if _above else 8),
+            xytext=(0, -12),
             textcoords="offset points", fontsize=7.5,
             color=_C_ANNOT, fontweight='bold',
-            va='top' if _above else 'bottom',
+            ha='center', va='top',
         )
 
     xlabels = [a['nome'] for a in with_data]
@@ -923,8 +921,8 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     ]
     ax.legend(
         handles=leg_handles,
-        loc='lower right',
-        ncol=1, fontsize=8.5, framealpha=0.5, labelcolor=_C_LEG,
+        loc='lower center', bbox_to_anchor=(0.5, -0.18),
+        ncol=3, fontsize=8.5, framealpha=0.5, labelcolor=_C_LEG,
     )
     fig.text(0.98, 0.02, "BidWise", ha='right', va='bottom',
              fontsize=7, color='#9CA3AF', style='italic')

@@ -272,6 +272,40 @@ st.markdown(
 
 tab_main, tab_guide, tab_about = st.tabs([t("tab_advisor", lang), t("tab_guide", lang), t("tab_about", lang)])
 
+# Persist active tab across reruns (e.g. language toggle) using sessionStorage
+st.markdown("""
+<script>
+(function() {
+    const KEY = 'bidwise_active_tab';
+    let _restoring = false;
+
+    function setup(tabs) {
+        // Restore saved tab
+        const saved = parseInt(sessionStorage.getItem(KEY) || '0');
+        if (saved > 0 && saved < tabs.length) {
+            _restoring = true;
+            tabs[saved].click();
+            setTimeout(function() { _restoring = false; }, 300);
+        }
+        // Track future clicks
+        tabs.forEach(function(tab, idx) {
+            tab.addEventListener('click', function() {
+                if (!_restoring) sessionStorage.setItem(KEY, idx);
+            });
+        });
+    }
+
+    var attempts = 0;
+    function init() {
+        var tabs = document.querySelectorAll('[data-baseweb="tab"]');
+        if (tabs.length < 3 && attempts < 40) { attempts++; setTimeout(init, 100); return; }
+        if (tabs.length >= 3) setup(tabs);
+    }
+    setTimeout(init, 150);
+})();
+</script>
+""", unsafe_allow_html=True)
+
 # ══════════════════════════════════════════════════════════════════════
 # GUIDE TAB
 # ══════════════════════════════════════════════════════════════════════
@@ -684,7 +718,7 @@ with tab_main:
     st.subheader(t("simulation", lang))
 
     if fmt != FormatoLeilao.NAO_LEILAO and sim.fornecedores:
-        # ── Archetype cards (stacked, one per archetype present) ──────
+        # ── Archetype cards ───────────────────────────────────────────
         _ARQ_DESC = {
             "Aggressive Leader":  t("archetype_aggressive", lang),
             "Cautious Follower":  t("archetype_cautious", lang),
@@ -707,8 +741,8 @@ with tab_main:
                         f"<div style='text-align:center;'>"
                         f"<span style='font-size:48px;font-weight:bold;line-height:1.1;'>{len(_nomes)}</span><br>"
                         f"<b>{_arq_name}</b><br>"
-                        f"{_sup_lines}<br>"
-                        f"<i style='color:gray;font-size:13px;'>{_desc}</i>"
+                        f"<i style='color:gray;font-size:13px;'>{_desc}</i><br>"
+                        f"{_sup_lines}"
                         f"</div>",
                         unsafe_allow_html=True,
                     )
