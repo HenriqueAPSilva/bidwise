@@ -829,16 +829,16 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
         "Dropout Candidate": "D",
     }
 
-    # Colour palette — dark mode vs PDF light mode
+    # Colour palette — use brighter text in Streamlit dark mode and darker text in PDF/light mode.
     _C_CIRCLE  = "#5DADE2"
     _C_DIAMOND = "#2ECC71"
     _C_BOX     = "#5DADE2"
-    _C_ANNOT   = "#333333"
-    _C_TITLE   = "#333333"
-    _C_LABELS  = "#333333"
+    _C_ANNOT   = "#E5E7EB" if dark else "#333333"
+    _C_TITLE   = "#F8FAFC" if dark else "#333333"
+    _C_LABELS  = "#E2E8F0" if dark else "#333333"
     _C_GRID    = "#4A4A6A" if dark else "#F3F4F6"
-    _C_SPINE   = "#555577" if dark else "#E5E7EB"
-    _C_LEG     = "#333333"
+    _C_SPINE   = "#64748B" if dark else "#E5E7EB"
+    _C_LEG     = "#E2E8F0" if dark else "#333333"
 
     n = len(with_data)
     fig, ax = plt.subplots(figsize=(max(7, n * 1.6), 5))
@@ -925,7 +925,7 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
         ncol=3, fontsize=8.5, framealpha=0.5, labelcolor=_C_LEG,
     )
     fig.text(0.98, 0.02, "BidWise", ha='right', va='bottom',
-             fontsize=7, color='#9CA3AF', style='italic')
+             fontsize=7, color='#CBD5E1' if dark else '#9CA3AF', style='italic')
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.22 if not rotate else 0.30)

@@ -20,7 +20,7 @@ O BidWise usa dois inputs por fornecedor — **Comportamento** e **Interesse Est
 **🏢 O Incumbente**
 O fornecedor que atualmente possui o contrato. Custos de troca (switching costs) jogam a favor dele — o comprador prefere mantê-lo se o preço estiver próximo. Ele raramente precisa ser agressivo.
 
-→ Modele como: **Moderado + Médio** (quer manter mas não vai lutar muito)
+→ Modele como: **Comportamento Moderado + Interesse Médio** (quer manter mas não vai lutar muito)
 → Se for um incumbente acomodado: **Conservador + Baixo**
 
 **📉 O "Já Veio Barato"**
@@ -60,7 +60,7 @@ Vende qualidade e serviço, não preço. Não vai competir num leilão puramente
 
 ### Dicas
 
-- **Na dúvida, use Moderado + Médio.** Este é o perfil neutro — o BidWise vai classificar como Floor-setter, que é o comportamento mais comum no mundo real.
+- **Na dúvida, use Comportamento Moderado + Interesse Médio.** Este é o perfil neutro — o BidWise vai classificar como Floor-setter, que é o comportamento mais comum no mundo real.
 
 - **O input mais impactante é o valor da proposta.** Mesmo que você não tenha certeza sobre o comportamento, inserir propostas equalizadas precisas dá ao BidWise os dados de dispersão necessários para boas recomendações.
 

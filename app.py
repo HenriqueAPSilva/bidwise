@@ -60,15 +60,15 @@ html, body { overflow-x: hidden !important; }
 
 :root {
     --bw-text-primary: var(--text-color, #111827);
-    --bw-text-secondary: #6B7280;
+    --bw-text-secondary: #4B5563;
     --bw-text-muted: #9CA3AF;
     --bw-surface-subtle: rgba(148, 163, 184, 0.12);
     --bw-surface-card: rgba(148, 163, 184, 0.10);
     --bw-border-subtle: rgba(148, 163, 184, 0.28);
-    --bw-privacy-bg: #182235;
-    --bw-privacy-text: #F8FAFC;
+    --bw-privacy-bg: #EEF4FF;
+    --bw-privacy-text: #1E3A5F;
     --bw-brand: #D4B23E;
-    --bw-brand-subtitle: #374151;
+    --bw-brand-subtitle: #1F2937;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -91,8 +91,17 @@ html, body { overflow-x: hidden !important; }
     padding: 8px 16px;
     text-align: center;
     font-size: 14px;
-    border-radius: 4px;
-    margin-bottom: 16px;
+    border-bottom: 1px solid var(--bw-border-subtle);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    z-index: 1000;
+}
+
+.stAppViewContainer,
+[data-testid="stSidebar"] {
+    padding-top: 44px;
 }
 
 .bw-header {

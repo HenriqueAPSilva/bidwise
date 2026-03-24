@@ -15,7 +15,9 @@
       "Bash(python:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8510)",
       "Bash(grep -n \"calcular_preco_abertura\\\\|estimar_saving\\\\|R$\\\\|18%\\\\|cap.*18\\\\|18.*cap\" C:/Users/henri/bidwise/motor.py)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
