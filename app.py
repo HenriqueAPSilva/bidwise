@@ -57,6 +57,114 @@ lang: str = "pt" if _lang_raw == "PT-BR" else "en"
 
 st.markdown("""<style>
 html, body { overflow-x: hidden !important; }
+
+:root {
+    --bw-text-primary: var(--text-color, #111827);
+    --bw-text-secondary: #6B7280;
+    --bw-text-muted: #9CA3AF;
+    --bw-surface-subtle: rgba(148, 163, 184, 0.12);
+    --bw-surface-card: rgba(148, 163, 184, 0.10);
+    --bw-border-subtle: rgba(148, 163, 184, 0.28);
+    --bw-privacy-bg: #182235;
+    --bw-privacy-text: #F8FAFC;
+    --bw-brand: #D4B23E;
+    --bw-brand-subtitle: #374151;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bw-text-secondary: #CBD5E1;
+        --bw-text-muted: #94A3B8;
+        --bw-surface-subtle: rgba(255, 255, 255, 0.06);
+        --bw-surface-card: rgba(255, 255, 255, 0.04);
+        --bw-border-subtle: rgba(255, 255, 255, 0.14);
+        --bw-privacy-bg: #0F172A;
+        --bw-privacy-text: #E2E8F0;
+        --bw-brand: #E8D27C;
+        --bw-brand-subtitle: #CBD5E1;
+    }
+}
+
+.bw-privacy-bar {
+    background-color: var(--bw-privacy-bg);
+    color: var(--bw-privacy-text);
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 14px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+}
+
+.bw-header {
+    padding-bottom: 4px;
+}
+
+.bw-header__brand {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--bw-brand);
+}
+
+.bw-header__title {
+    font-size: 1.1rem;
+    color: var(--bw-brand-subtitle);
+    font-weight: 500;
+}
+
+.bw-header__tagline {
+    color: var(--bw-text-secondary);
+    font-size: 0.88rem;
+    margin-bottom: 1rem;
+}
+
+.bw-format-title {
+    color: var(--bw-format-accent, var(--bw-text-primary));
+    margin-bottom: 0;
+}
+
+.bw-archetype-card {
+    text-align: center;
+    background: var(--bw-surface-card);
+    border: 1px solid var(--bw-border-subtle);
+    border-radius: 12px;
+    padding: 16px 12px;
+    height: 100%;
+}
+
+.bw-archetype-card__count {
+    font-size: 48px;
+    font-weight: bold;
+    line-height: 1.1;
+    color: var(--bw-text-primary);
+}
+
+.bw-archetype-card__desc {
+    color: var(--bw-text-secondary);
+    font-size: 13px;
+}
+
+.bw-scenario-card {
+    border-left: 4px solid var(--bw-format-accent, var(--bw-text-primary));
+    background: var(--bw-surface-card);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.bw-scenario-card__format {
+    color: var(--bw-format-accent, var(--bw-text-primary));
+    font-size: 0.9rem;
+}
+
+.bw-footer {
+    text-align: center;
+    color: var(--bw-text-muted);
+    font-size: 0.8rem;
+    padding-bottom: 1rem;
+}
+
+.bw-footer a {
+    color: var(--bw-text-muted);
+}
 </style>""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────
@@ -263,54 +371,31 @@ st.markdown(
 # ──────────────────────────────────────────────────────────────────────
 
 st.markdown(
-    f'<div style="background-color:#1a1a2e;color:white;padding:8px 16px;text-align:center;'
-    f'font-size:14px;border-radius:4px;margin-bottom:16px;">'
+    f'<div class="bw-privacy-bar">'
     f'{t("privacy_bar", lang)}'
     f'</div>',
     unsafe_allow_html=True,
 )
 
-tab_main, tab_guide, tab_about = st.tabs([t("tab_advisor", lang), t("tab_guide", lang), t("tab_about", lang)])
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = 0
 
-# Persist active tab across reruns (e.g. language toggle) using sessionStorage
-st.markdown("""
-<script>
-(function() {
-    const KEY = 'bidwise_active_tab';
-    let _restoring = false;
+_tab_labels = [t("tab_advisor", lang), t("tab_guide", lang), t("tab_about", lang)]
+_tc1, _tc2, _tc3 = st.columns(3)
+for _ti, (_tcol, _tlabel) in enumerate(zip([_tc1, _tc2, _tc3], _tab_labels)):
+    with _tcol:
+        if st.button(_tlabel, key=f"_tabbtn_{_ti}", use_container_width=True,
+                     type="primary" if st.session_state.active_tab == _ti else "secondary"):
+            st.session_state.active_tab = _ti
+            st.rerun()
 
-    function setup(tabs) {
-        // Restore saved tab
-        const saved = parseInt(sessionStorage.getItem(KEY) || '0');
-        if (saved > 0 && saved < tabs.length) {
-            _restoring = true;
-            tabs[saved].click();
-            setTimeout(function() { _restoring = false; }, 300);
-        }
-        // Track future clicks
-        tabs.forEach(function(tab, idx) {
-            tab.addEventListener('click', function() {
-                if (!_restoring) sessionStorage.setItem(KEY, idx);
-            });
-        });
-    }
-
-    var attempts = 0;
-    function init() {
-        var tabs = document.querySelectorAll('[data-baseweb="tab"]');
-        if (tabs.length < 3 && attempts < 40) { attempts++; setTimeout(init, 100); return; }
-        if (tabs.length >= 3) setup(tabs);
-    }
-    setTimeout(init, 150);
-})();
-</script>
-""", unsafe_allow_html=True)
+_active_tab = st.session_state.active_tab
 
 # ══════════════════════════════════════════════════════════════════════
 # GUIDE TAB
 # ══════════════════════════════════════════════════════════════════════
 
-with tab_guide:
+if _active_tab == 1:
     _guide_file = "supplier_guide_pt.md" if lang == "pt" else "supplier_guide.md"
     try:
         with open(_guide_file, encoding="utf-8") as _f:
@@ -323,7 +408,7 @@ with tab_guide:
 # ABOUT TAB
 # ══════════════════════════════════════════════════════════════════════
 
-with tab_about:
+if _active_tab == 2:
     _about_file = "about_pt.md" if lang == "pt" else "about.md"
     try:
         with open(_about_file, encoding="utf-8") as _f:
@@ -336,7 +421,7 @@ with tab_about:
 # MAIN TAB — AUCTION ADVISOR
 # ══════════════════════════════════════════════════════════════════════
 
-with tab_main:
+if _active_tab == 0:
 
     # ──────────────────────────────────────────────────────────────────
     # HEADER
@@ -344,14 +429,14 @@ with tab_main:
 
     st.markdown(
         f"""
-        <div style="padding-bottom: 4px;">
-            <span style="font-size:2.4rem; font-weight:800; color:#F0E68C;">🔨 BidWise</span>
+        <div class="bw-header">
+            <span class="bw-header__brand">🔨 BidWise</span>
             &nbsp;
-            <span style="font-size:1.1rem; color:#374151; font-weight:500;">
+            <span class="bw-header__title">
                 {"Consultor de Estratégia de Leilão Reverso" if lang == "pt" else "Reverse Auction Strategy Advisor"}
             </span>
         </div>
-        <div style="color:#6B7280; font-size:0.88rem; margin-bottom:1rem;">
+        <div class="bw-header__tagline">
             {t("tagline", lang)}
         </div>
         """,
@@ -534,7 +619,7 @@ with tab_main:
     else:
         with st.container(border=True):
             st.markdown(
-                f"<h2 style='color:{fmt_color}; margin-bottom:0;'>"
+                f"<h2 class='bw-format-title' style='--bw-format-accent:{fmt_color};'>"
                 f"{fmt_emoji} {_format_label(fmt, lang)}</h2>",
                 unsafe_allow_html=True,
             )
@@ -738,10 +823,10 @@ with tab_main:
                     _sup_lines = "<br>".join(_nomes)
                     _desc = _ARQ_DESC.get(_arq_name, "")
                     st.markdown(
-                        f"<div style='text-align:center;'>"
-                        f"<span style='font-size:48px;font-weight:bold;line-height:1.1;'>{len(_nomes)}</span><br>"
+                        f"<div class='bw-archetype-card'>"
+                        f"<span class='bw-archetype-card__count'>{len(_nomes)}</span><br>"
                         f"<b>{_arq_name}</b><br>"
-                        f"<i style='color:gray;font-size:13px;'>{_desc}</i><br>"
+                        f"<i class='bw-archetype-card__desc'>{_desc}</i><br>"
                         f"{_sup_lines}"
                         f"</div>",
                         unsafe_allow_html=True,
@@ -822,9 +907,9 @@ with tab_main:
                 s_sim = scenario["sim"]
                 color = FORMAT_COLOR[r.formato]
                 st.markdown(
-                    f"<div style='border-left: 4px solid {color}; padding-left: 8px;'>"
+                    f"<div class='bw-scenario-card' style='--bw-format-accent:{color};'>"
                     f"<b>{FORMAT_EMOJI[r.formato]} {scenario['label']}</b><br>"
-                    f"<span style='color:{color}; font-size:0.9rem;'>{_format_label(r.formato, lang)}</span>"
+                    f"<span class='bw-scenario-card__format'>{_format_label(r.formato, lang)}</span>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -890,9 +975,9 @@ with tab_main:
     st.divider()
     st.markdown(
         f"""
-        <div style="text-align:center; color:#9CA3AF; font-size:0.8rem; padding-bottom:1rem;">
+        <div class="bw-footer">
             {t("footer_text", lang)} &nbsp;·&nbsp;
-            <a href="https://github.com/HenriqueAPSilva/bidwise" style="color:#9CA3AF;">
+            <a href="https://github.com/HenriqueAPSilva/bidwise">
                 {t("github_link", lang)}
             </a>
         </div>
