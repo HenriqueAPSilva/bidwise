@@ -1052,17 +1052,22 @@ def estimar_saving(
 
 # ─── Referências teóricas por formato ────────────────────────────────
 
-def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
+def gerar_referencias(formato: FormatoLeilao, lang: str = "en") -> list[ReferenciaTeórica]:
     """Retorna as referências teóricas relevantes para o formato recomendado."""
 
     refs: list[ReferenciaTeórica] = []
+    _is_pt = lang == "pt"
 
     if formato == FormatoLeilao.INGLES_COMPLETO:
         refs.append(ReferenciaTeórica(
             livro="Auction Theory",
             autor="Vijay Krishna",
-            conceito="Entry value and ascending auctions",
+            conceito="Valor de entrada e leilões ascendentes" if _is_pt else "Entry value and ascending auctions",
             aplicacao=(
+                "Mais participantes em um leilão inglês aumentam o saving esperado — "
+                "cada fornecedor adicional desloca a dinâmica de competição e "
+                "empurra os lances para mais perto do custo privado."
+                if _is_pt else
                 "More participants in an English auction increases expected saving — "
                 "each additional qualified supplier shifts the winner's curse and "
                 "drives bids closer to private cost."
@@ -1071,8 +1076,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Misbehaving",
             autor="Richard H. Thaler",
-            conceito="Loss aversion and mental accounting",
+            conceito="Aversão à perda e contabilidade mental" if _is_pt else "Loss aversion and mental accounting",
             aplicacao=(
+                "O termômetro amplifica a aversão à perda — fornecedores que perdem posição "
+                "no ranking sentem essa perda mais intensamente do que um ganho equivalente, "
+                "o que estimula novos lances mais agressivos."
+                if _is_pt else
                 "The thermometer amplifies loss aversion — suppliers who lose ranking "
                 "position feel the loss more intensely than the equivalent gain, "
                 "driving more aggressive rebidding."
@@ -1081,8 +1090,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="The Psychology of Price",
             autor="Leigh Caldwell",
-            conceito="Psychological framing of decrement steps",
+            conceito="Enquadramento psicológico dos decrementos" if _is_pt else "Psychological framing of decrement steps",
             aplicacao=(
+                "O tamanho do decremento enquadra cada lance como uma decisão discreta de perda. "
+                "Decrementos menores incentivam mais lances; maiores reduzem "
+                "a participação dos fornecedores mais fracos."
+                if _is_pt else
                 "Decrement size frames each bid as a discrete loss decision. "
                 "Smaller decrements encourage more frequent bids; larger ones "
                 "reduce participation from weaker suppliers."
@@ -1093,8 +1106,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="The Theory of Auctions",
             autor="Paul Klemperer",
-            conceito="Reducing signals to hinder tacit coordination",
+            conceito="Redução de sinais para dificultar coordenação tácita" if _is_pt else "Reducing signals to hinder tacit coordination",
             aplicacao=(
+                "Remover o termômetro reduz a informação que cada fornecedor "
+                "tem sobre os concorrentes, dificultando coordenação tácita "
+                "em torno de um lance mínimo vencedor."
+                if _is_pt else
                 "Removing the thermometer reduces the information each supplier "
                 "has about competitors, making it harder to coordinate tacitly "
                 "on a minimum winning bid."
@@ -1103,8 +1120,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="The Psychology of Price",
             autor="Leigh Caldwell",
-            conceito="Ranking visibility and competitive pressure",
+            conceito="Visibilidade do ranking e pressão competitiva" if _is_pt else "Ranking visibility and competitive pressure",
             aplicacao=(
+                "Só o ranking preserva a pressão competitiva sem revelar "
+                "a distância exata — os fornecedores sabem se estão ganhando ou perdendo, "
+                "mas não por quanto."
+                if _is_pt else
                 "Ranking alone preserves competitive pressure without revealing "
                 "the exact gap — suppliers know if they are winning or losing "
                 "but not by how much."
@@ -1115,8 +1136,13 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Auction Theory",
             autor="Vijay Krishna",
-            conceito="Dutch–Sealed Bid strategic equivalence",
+            conceito="Equivalência estratégica entre holandês e proposta selada" if _is_pt else "Dutch–Sealed Bid strategic equivalence",
             aplicacao=(
+                "O holandês reverso é estrategicamente equivalente a uma proposta selada — "
+                "cada fornecedor decide de forma independente, sem observar concorrentes. "
+                "A opacidade total reduz coordenação tácita e é preferível quando "
+                "o campo ativo é pequeno."
+                if _is_pt else
                 "Dutch Reverse is strategically equivalent to a sealed bid — "
                 "each supplier decides independently without observing competitors. "
                 "Full opacity reduces tacit coordination and is preferred when "
@@ -1126,8 +1152,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Game Theory for Applied Economists",
             autor="Robert Gibbons",
-            conceito="Bayesian-Nash equilibrium in incomplete information games",
+            conceito="Equilíbrio bayesiano de Nash em jogos de informação incompleta" if _is_pt else "Bayesian-Nash equilibrium in incomplete information games",
             aplicacao=(
+                "A decisão de aceite de cada fornecedor no holandês reverso é uma "
+                "estratégia bayesiana de Nash: ele aceita quando o preço chamado atinge "
+                "seu limite privado de custo, sem informação sobre os demais."
+                if _is_pt else
                 "Each supplier's acceptance decision in Dutch Reverse is a "
                 "Bayesian-Nash strategy: they accept when the called price reaches "
                 "their private cost threshold, with no information about others."
@@ -1136,8 +1166,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Negotiation Genius",
             autor="Deepak Malhotra & Max Bazerman",
-            conceito="Anchoring via opening price",
+            conceito="Ancoragem via preço de abertura" if _is_pt else "Anchoring via opening price",
             aplicacao=(
+                "No holandês reverso, o comprador controla a âncora — "
+                "um preço inicial baixo força os fornecedores a recalibrarem "
+                "suas expectativas para baixo antes de qualquer aceite."
+                if _is_pt else
                 "In Dutch Reverse the buyer controls the anchor — "
                 "a low starting price forces suppliers to recalibrate "
                 "their expectation downward before any acceptance decision."
@@ -1148,8 +1182,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Thinking Strategically",
             autor="Avinash Dixit & Barry Nalebuff",
-            conceito="Backward induction in sequential games",
+            conceito="Indução retroativa em jogos sequenciais" if _is_pt else "Backward induction in sequential games",
             aplicacao=(
+                "A eliminação rodada a rodada cria um jogo sequencial resolvido por "
+                "indução retroativa — os fornecedores antecipam as próximas rodadas e decidem "
+                "o momento ótimo de saída. Fornecedores com custo mais alto saem primeiro."
+                if _is_pt else
                 "Round-by-round elimination creates a sequential game solvable by "
                 "backward induction — suppliers anticipate future rounds and decide "
                 "optimal exit timing. Higher-cost suppliers exit first."
@@ -1158,8 +1196,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Game Theory for Applied Economists",
             autor="Robert Gibbons",
-            conceito="Bayesian updating across rounds",
+            conceito="Atualização bayesiana entre rodadas" if _is_pt else "Bayesian updating across rounds",
             aplicacao=(
+                "Cada eliminação é um sinal público — os fornecedores remanescentes "
+                "atualizam suas crenças sobre a distribuição de custos do campo, "
+                "afetando sua própria disposição de permanecer."
+                if _is_pt else
                 "Each elimination event is a public signal — remaining suppliers "
                 "update their beliefs about the field's cost distribution, "
                 "affecting their own willingness to stay."
@@ -1170,8 +1212,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="Strategic Sourcing and Category Management",
             autor="Magnus Carlsson",
-            conceito="Kraljic matrix and category strategies",
+            conceito="Matriz de Kraljic e estratégias de categoria" if _is_pt else "Kraljic matrix and category strategies",
             aplicacao=(
+                "Itens Estratégicos e de Gargalo exigem mecanismos diferenciados — "
+                "a competição aberta de preços expõe relacionamentos críticos com fornecedores "
+                "a risco sem benefício proporcional."
+                if _is_pt else
                 "Strategic and Bottleneck items require differentiated mechanisms — "
                 "open price competition exposes critical supplier relationships "
                 "to risk without proportional benefit."
@@ -1180,8 +1226,11 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
         refs.append(ReferenciaTeórica(
             livro="eSourcing Capability Model",
             autor="Sourcing Industry Group",
-            conceito="Structured sourcing process maturity",
+            conceito="Maturidade de processo de sourcing estruturado" if _is_pt else "Structured sourcing process maturity",
             aplicacao=(
+                "Um framework decisório auditável — documentar por que um leilão "
+                "não foi usado é tão importante quanto documentar por que foi."
+                if _is_pt else
                 "An auditable decision framework — documenting why an auction "
                 "was not used is as important as documenting why one was."
             ),
@@ -1191,8 +1240,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
     refs.append(ReferenciaTeórica(
         livro="Negotiation Genius",
         autor="Deepak Malhotra & Max Bazerman",
-        conceito="Auto-extension and residual value extraction",
+        conceito="Prorrogação automática e extração de valor residual" if _is_pt else "Auto-extension and residual value extraction",
         aplicacao=(
+            "A prorrogação automática nos minutos finais captura lances de última hora "
+            "(sniping), extraindo saving adicional que seria perdido "
+            "com um encerramento fixo."
+            if _is_pt else
             "Automatic extension in the final minutes captures last-minute bids "
             "(sniping), extracting additional saving that would be lost "
             "with a fixed closing time."
@@ -1201,8 +1254,12 @@ def gerar_referencias(formato: FormatoLeilao) -> list[ReferenciaTeórica]:
     refs.append(ReferenciaTeórica(
         livro="Misbehaving",
         autor="Richard H. Thaler",
-        conceito="Winner's curse and mental accounting",
+        conceito="Maldição do vencedor e contabilidade mental" if _is_pt else "Winner's curse and mental accounting",
         aplicacao=(
+            "Compradores devem considerar a maldição do vencedor nas projeções de saving — "
+            "o fornecedor vencedor pode ter ofertado abaixo de um piso sustentável, "
+            "criando risco de entrega ou qualidade."
+            if _is_pt else
             "Buyers should account for winner's curse in saving projections — "
             "the winning supplier may have bid below a sustainable floor, "
             "creating delivery or quality risk."
@@ -1231,7 +1288,7 @@ def recomendar(inp: InputLeilao, lang: str = "en") -> Recomendacao:
             justificativa=alerta.explicacao,
             parametros=None,
             saving=None,
-            referencias=gerar_referencias(FormatoLeilao.NAO_LEILAO),
+            referencias=gerar_referencias(FormatoLeilao.NAO_LEILAO, lang=lang),
             alerta_nao_leilao=alerta,
             score_confianca=0.9,
         )
@@ -1351,7 +1408,7 @@ def recomendar(inp: InputLeilao, lang: str = "en") -> Recomendacao:
     saving = estimar_saving(formato, inp, decremento_pct)
 
     # 5) Referências teóricas
-    referencias = gerar_referencias(formato)
+    referencias = gerar_referencias(formato, lang=lang)
 
     # 6) Justificativa em linguagem natural
     justificativa = _gerar_justificativa(formato, inp, scores, parametros, lang=lang)

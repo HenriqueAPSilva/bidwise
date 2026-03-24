@@ -284,6 +284,14 @@ def _fmt_brl(value: float | None) -> str:
     return f"$ {value:,.2f}"
 
 
+def _is_dark_theme() -> bool:
+    """Best-effort detection of the active Streamlit theme base."""
+    try:
+        return str(st.get_option("theme.base")).lower() == "dark"
+    except Exception:
+        return False
+
+
 def _build_copy_prompt(inp: InputLeilao, rec, sim, lang: str = "en") -> str:
     """Generate a structured prompt the user can paste into any AI assistant."""
     _KRALJIC_EN = {
@@ -776,7 +784,10 @@ if _active_tab == 0:
                 )
 
         # ── Uncertainty chart ─────────────────────────────────────────
-        _fig, _has_chart = draw_uncertainty_chart(sim.alvos_por_fornecedor)
+        _fig, _has_chart = draw_uncertainty_chart(
+            sim.alvos_por_fornecedor,
+            dark=_is_dark_theme(),
+        )
         if _has_chart:
             import matplotlib.pyplot as plt
             st.pyplot(_fig, use_container_width=True)
