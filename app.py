@@ -58,30 +58,41 @@ lang: str = "pt" if _lang_raw == "PT-BR" else "en"
 st.markdown("""<style>
 html, body { overflow-x: hidden !important; }
 
+/* ── BidWise Design Tokens — MarketWise family, azul-petróleo ──────── */
 :root {
-    --bw-text-primary: var(--text-color, #111827);
-    --bw-text-secondary: #4B5563;
-    --bw-text-muted: #9CA3AF;
-    --bw-surface-subtle: rgba(148, 163, 184, 0.12);
-    --bw-surface-card: rgba(148, 163, 184, 0.10);
-    --bw-border-subtle: rgba(148, 163, 184, 0.28);
-    --bw-privacy-bg: #EEF4FF;
-    --bw-privacy-text: #1E3A5F;
-    --bw-brand: #D4B23E;
-    --bw-brand-subtitle: #1F2937;
+    /* Texto */
+    --bw-text-primary: var(--text-color, #1C2D3A);
+    --bw-text-secondary: #3F4F5F;
+    --bw-text-muted: #6B7E8A;
+
+    /* Superfícies */
+    --bw-surface-subtle: rgba(74, 144, 164, 0.08);
+    --bw-surface-card: rgba(74, 144, 164, 0.05);
+
+    /* Bordas */
+    --bw-border-subtle: rgba(196, 213, 223, 0.90);
+
+    /* Barra de privacidade */
+    --bw-privacy-bg: #EBF1F6;
+    --bw-privacy-text: #1C2D3A;
+
+    /* Marca — azul-petróleo BidWise */
+    --bw-brand: #4A90A4;
+    --bw-brand-subtitle: #3F4F5F;
 }
 
+/* ── Tema escuro ────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bw-text-secondary: #CBD5E1;
-        --bw-text-muted: #94A3B8;
-        --bw-surface-subtle: rgba(255, 255, 255, 0.06);
-        --bw-surface-card: rgba(255, 255, 255, 0.04);
-        --bw-border-subtle: rgba(255, 255, 255, 0.14);
-        --bw-privacy-bg: #0F172A;
-        --bw-privacy-text: #E2E8F0;
-        --bw-brand: #E8D27C;
-        --bw-brand-subtitle: #CBD5E1;
+        --bw-text-secondary: #A8BFCC;
+        --bw-text-muted: #6B8A9A;
+        --bw-surface-subtle: rgba(91, 174, 196, 0.10);
+        --bw-surface-card: rgba(91, 174, 196, 0.05);
+        --bw-border-subtle: rgba(91, 174, 196, 0.22);
+        --bw-privacy-bg: #0E1A24;
+        --bw-privacy-text: #E8F2F8;
+        --bw-brand: #5BAEC4;
+        --bw-brand-subtitle: #A8BFCC;
     }
 }
 
@@ -231,11 +242,12 @@ FORMAT_EMOJI: dict[FormatoLeilao, str] = {
 }
 
 FORMAT_COLOR: dict[FormatoLeilao, str] = {
-    FormatoLeilao.INGLES_COMPLETO: "#1A56A0",
-    FormatoLeilao.INGLES_REDUZIDO: "#0E7C7B",
-    FormatoLeilao.HOLANDES:        "#6B21A8",
-    FormatoLeilao.JAPONES:         "#B45309",
-    FormatoLeilao.NAO_LEILAO:      "#B91C1C",
+    # Mid-tone para funcionar em tema claro e escuro
+    FormatoLeilao.INGLES_COMPLETO: "#2D7DD2",  # azul-médio  — visibilidade + pressão
+    FormatoLeilao.INGLES_REDUZIDO: "#17A2A2",  # teal        — visibilidade reduzida
+    FormatoLeilao.HOLANDES:        "#7C3AED",  # violeta     — opacidade / clock
+    FormatoLeilao.JAPONES:         "#D97706",  # âmbar       — eliminação progressiva
+    FormatoLeilao.NAO_LEILAO:      "#DC2626",  # vermelho    — alerta
 }
 
 FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
