@@ -222,14 +222,21 @@ button[kind="secondary"] {
     border-color: var(--bw-accent-border) !important;
 }
 
-[data-testid="stSidebar"] [data-baseweb="radio"] div[role="radiogroup"] label:has(input:checked),
+[data-testid="stSidebar"] [data-baseweb="radio"] div[role="radiogroup"] label,
 [data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"] {
-    background-color: var(--bw-accent-soft) !important;
-    border-color: var(--bw-accent-border) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stSidebar"] input[type="radio"] {
+    accent-color: var(--bw-accent) !important;
 }
 
 [data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
-[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before {
+[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before,
+[data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"],
+[data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"]::before {
     background-color: var(--bw-accent) !important;
     border-color: var(--bw-accent) !important;
 }

@@ -1,8 +1,8 @@
-"""
-exportador.py — Geração de relatório PDF com ReportLab
+﻿"""
+exportador.py â€” GeraÃ§Ã£o de relatÃ³rio PDF com ReportLab
 Autor: Henrique Alexandre Pinto Silva
-Descrição: Gera relatório PDF completo da estratégia de leilão reverso.
-           Retorna bytes — não salva em disco (uso com st.download_button).
+DescriÃ§Ã£o: Gera relatÃ³rio PDF completo da estratÃ©gia de leilÃ£o reverso.
+           Retorna bytes â€” nÃ£o salva em disco (uso com st.download_button).
 """
 
 from __future__ import annotations
@@ -36,17 +36,17 @@ from simulador import SimulacaoResult, TipoAlerta
 from i18n import t as _t
 
 _FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
-    FormatoLeilao.INGLES_COMPLETO: "English Reverse — Ranking + Thermometer",
-    FormatoLeilao.INGLES_REDUZIDO: "English Reverse — Ranking Only",
+    FormatoLeilao.INGLES_COMPLETO: "English Reverse â€” Ranking + Thermometer",
+    FormatoLeilao.INGLES_REDUZIDO: "English Reverse â€” Ranking Only",
     FormatoLeilao.HOLANDES:        "Dutch Reverse",
     FormatoLeilao.JAPONES:         "Japanese Reverse",
     FormatoLeilao.NAO_LEILAO:      "Do Not Auction",
 }
 
 
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # PALETA DE CORES
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 NAVY       = colors.HexColor("#0D2137")
 BLUE       = colors.HexColor("#1A56A0")
@@ -74,9 +74,9 @@ _FORMAT_COLORS: dict[FormatoLeilao, tuple] = {
 }
 
 
-# ──────────────────────────────────────────────────────────────────────
-# ESTILOS DE PARÁGRAFO
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ESTILOS DE PARÃGRAFO
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _build_styles() -> dict[str, ParagraphStyle]:
     base = getSampleStyleSheet()
@@ -251,9 +251,9 @@ def _build_styles() -> dict[str, ParagraphStyle]:
     }
 
 
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # HELPERS
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _hr(styles: dict) -> HRFlowable:
     return HRFlowable(
@@ -267,13 +267,13 @@ def _sp(h: float = 0.3) -> Spacer:
 
 def _fmt_brl(value: Optional[float]) -> str:
     if value is None:
-        return "—"
+        return "â€”"
     return f"$ {value:,.2f}"
 
 
 def _fmt_pct(value: Optional[float], suffix: str = "%") -> str:
     if value is None:
-        return "—"
+        return "â€”"
     return f"{value:.1f}{suffix}"
 
 
@@ -286,9 +286,9 @@ def _confidence_label(score: float, lang: str = "en") -> str:
         return _t("pdf_confidence_low", lang).format(score=score)
 
 
-# ──────────────────────────────────────────────────────────────────────
-# SEÇÕES DO DOCUMENTO
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# SEÃ‡Ã•ES DO DOCUMENTO
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _section_header(styles: dict, page_w: float, lang: str = "en") -> list:
     now = datetime.now().strftime("%Y-%m-%d  %H:%M")
@@ -321,7 +321,7 @@ def _section_header(styles: dict, page_w: float, lang: str = "en") -> list:
 def _section_scenario_summary(
     styles: dict, inp: InputLeilao, page_w: float, lang: str = "en"
 ) -> list:
-    """Scenario inputs snapshot — printed before the recommendation card."""
+    """Scenario inputs snapshot â€” printed before the recommendation card."""
     elements: list = []
     elements.append(Paragraph(_t("pdf_scenario_summary", lang), styles["section_title"]))
 
@@ -329,13 +329,13 @@ def _section_scenario_summary(
 
     _KRALJIC_LABEL = {
         "Alavanca":    "Alavanca"    if _is_pt else "Leverage",
-        "Estratégico": "Estratégico" if _is_pt else "Strategic",
+        "EstratÃ©gico": "EstratÃ©gico" if _is_pt else "Strategic",
         "Gargalo":     "Gargalo"     if _is_pt else "Bottleneck",
-        "Não crítico": "Não crítico" if _is_pt else "Non-critical",
+        "NÃ£o crÃ­tico": "NÃ£o crÃ­tico" if _is_pt else "Non-critical",
     }
     _NIVEL_LABEL = {
         "Alto":  "Alto"  if _is_pt else "High",
-        "Médio": "Médio" if _is_pt else "Medium",
+        "MÃ©dio": "MÃ©dio" if _is_pt else "Medium",
         "Baixo": "Baixo" if _is_pt else "Low",
     }
     _BEHAV_LABEL = {
@@ -344,7 +344,7 @@ def _section_scenario_summary(
         "Conservador": "Conservador" if _is_pt else "Conservative",
     }
 
-    # ── Auction context ──────────────────────────────────────────────
+    # â”€â”€ Auction context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     ctx_rows = [
         [Paragraph(_t("pdf_param_header", lang), styles["table_header"]),
          Paragraph(_t("pdf_value_header", lang), styles["table_header"])],
@@ -371,7 +371,7 @@ def _section_scenario_summary(
     elements.append(ctx_table)
     elements.append(_sp(0.25))
 
-    # ── Supplier profiles ────────────────────────────────────────────
+    # â”€â”€ Supplier profiles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     sup_rows: list[list] = [[
         Paragraph(_t("pdf_supplier_header", lang), styles["table_header"]),
         Paragraph(_t("pdf_proposal_header", lang), styles["table_header"]),
@@ -379,7 +379,7 @@ def _section_scenario_summary(
         Paragraph(_t("pdf_interest_header", lang), styles["table_header"]),
     ]]
     for forn in inp.fornecedores:
-        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
+        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "â€”"
         sup_rows.append([
             Paragraph(forn.nome, styles["table_cell_bold"]),
             Paragraph(proposta, styles["table_cell"]),
@@ -472,8 +472,8 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
     def row(label: str, pct: Optional[str], brl: Optional[str]) -> list:
         return [
             Paragraph(label, styles["table_cell_bold"]),
-            Paragraph(pct or "—", styles["table_cell"]),
-            Paragraph(brl or "—", styles["table_cell"]),
+            Paragraph(pct or "â€”", styles["table_cell"]),
+            Paragraph(brl or "â€”", styles["table_cell"]),
         ]
 
     rows.append(row(
@@ -489,21 +489,21 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
     rows.append(row(
         _t("duration_param", lang),
         f"{p.duracao_minutos} min",
-        "—",
+        "â€”",
     ))
 
     if p.prorrogacao_minutos:
         rows.append(row(
             _t("auto_ext_param", lang).format(trigger=p.prorrogacao_trigger_minutos),
             f"+{p.prorrogacao_minutos} min",
-            "—",
+            "â€”",
         ))
 
     if p.visibilidade:
         rows.append([
             Paragraph(_t("thermometer_param", lang), styles["table_cell_bold"]),
             Paragraph(p.visibilidade, styles["table_cell"]),
-            Paragraph("—", styles["table_cell"]),
+            Paragraph("â€”", styles["table_cell"]),
         ])
 
     if p.rodadas_estimadas:
@@ -511,7 +511,7 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
         rows.append(row(
             _rounds_label,
             f"~{p.rodadas_estimadas}",
-            "—",
+            "â€”",
         ))
 
     if p.incremento_holandes_pct:
@@ -569,7 +569,7 @@ def _section_saving(styles: dict, rec: Recomendacao, page_w: float, lang: str = 
     pct_vals  = [s.pessimista_pct, s.realista_pct, s.otimista_pct]
     brl_vals  = [s.pessimista_brl, s.realista_brl, s.otimista_brl]
 
-    # Cabeçalho
+    # CabeÃ§alho
     header_row = [
         [Paragraph(label, styles["saving_label"])]
         for label in labels
@@ -645,20 +645,20 @@ def _section_simulation(
         elements.append(Paragraph(sim.narrativa, styles["body"]))
         return elements
 
-    # Distribuição de arquétipos
+    # DistribuiÃ§Ã£o de arquÃ©tipos
     contagem: dict[str, int] = {}
     for f in sim.fornecedores:
         contagem[f.arquetipo.value] = contagem.get(f.arquetipo.value, 0) + 1
-    dist_str = "  |  ".join(f"{v}× {k}" for k, v in contagem.items())
+    dist_str = "  |  ".join(f"{v}Ã— {k}" for k, v in contagem.items())
     elements.append(Paragraph(_t("pdf_supplier_field", lang).format(dist=dist_str), styles["body"]))
     elements.append(_sp(0.15))
 
-    # Narrativa determinística
+    # Narrativa determinÃ­stica
     for line in sim.narrativa.split("\n\n"):
         if line.strip():
             elements.append(Paragraph(line.strip(), styles["body"]))
 
-    # Vencedor e preço final
+    # Vencedor e preÃ§o final
     if sim.vencedor_provavel and sim.preco_final_estimado_pct is not None:
         result_p = Paragraph(
             _t("pdf_projected_outcome", lang).format(
@@ -683,23 +683,23 @@ def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float, lang: str
 
     sev_style = {
         "Alta":  ("alert_high", "[HIGH]  "),
-        "Média": ("alert_mid",  "[MED]   "),
+        "MÃ©dia": ("alert_mid",  "[MED]   "),
         "Baixa": ("alert_low",  "[LOW]   "),
     }
     sev_bg = {
         "Alta":  RED_BG,
-        "Média": AMBER_BG,
+        "MÃ©dia": AMBER_BG,
         "Baixa": colors.HexColor("#F0FDF4"),
     }
     sev_border = {
         "Alta":  RED,
-        "Média": AMBER,
+        "MÃ©dia": AMBER,
         "Baixa": GREEN,
     }
 
-    for alerta in sorted(sim.alertas, key=lambda a: {"Alta": 0, "Média": 1, "Baixa": 2}[a.severidade]):
+    for alerta in sorted(sim.alertas, key=lambda a: {"Alta": 0, "MÃ©dia": 1, "Baixa": 2}[a.severidade]):
         style_key, prefix = sev_style.get(alerta.severidade, ("body", ""))
-        text = f"<b>{alerta.tipo.value}</b> — {alerta.descricao}"
+        text = f"<b>{alerta.tipo.value}</b> â€” {alerta.descricao}"
         alert_cell = Table(
             [[Paragraph(text, styles[style_key])]],
             colWidths=[page_w - 4],
@@ -770,14 +770,14 @@ def _section_suppliers(styles: dict, inp: InputLeilao, page_w: float) -> list:
     }
     _INT_EN = {
         "Alto":  "High",
-        "Médio": "Medium",
+        "MÃ©dio": "Medium",
         "Baixo": "Low",
     }
 
     header = ["Supplier", "Proposal ($)", "Strategic Interest", "Behavior"]
     rows = [header]
     for forn in inp.fornecedores:
-        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "—"
+        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "â€”"
         rows.append([
             forn.nome,
             proposta,
@@ -813,8 +813,8 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     Generates the per-supplier uncertainty projection chart.
     Returns (fig, has_data). has_data=False when no supplier has a proposal value.
 
-    dark=True  → dark-mode palette (transparent bg, white text) for Streamlit.
-    dark=False → light palette (white bg, dark text) for PDF export.
+    dark=True  â†’ dark-mode palette (transparent bg, white text) for Streamlit.
+    dark=False â†’ light palette (white bg, dark text) for PDF export.
 
     Each entry in alvos: {nome, proposta_inicial, alvo_realista, range_min, range_max, arquetipo}
     """
@@ -829,7 +829,7 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
         "Dropout Candidate": "D",
     }
 
-    # Colour palette — use brighter text in Streamlit dark mode and darker text in PDF/light mode.
+    # Colour palette â€” use brighter text in Streamlit dark mode and darker text in PDF/light mode.
     _C_CIRCLE  = "#5DADE2"
     _C_DIAMOND = "#2ECC71"
     _C_BOX     = "#5DADE2"
@@ -848,8 +848,8 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     for i, a in enumerate(with_data):
         prop        = a["proposta_inicial"]
         alvo_pct    = a["alvo_realista"]
-        rmin_pct    = a["range_min"]   # lower saving → higher price
-        rmax_pct    = a["range_max"]   # higher saving → lower price
+        rmin_pct    = a["range_min"]   # lower saving â†’ higher price
+        rmax_pct    = a["range_max"]   # higher saving â†’ lower price
 
         target      = prop * (1 - alvo_pct / 100)
         price_upper = prop * (1 - rmin_pct / 100)
@@ -862,11 +862,11 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
             edgecolor=_C_CIRCLE, linewidth=0.8, zorder=2,
         ))
 
-        # Initial proposal — open circle
+        # Initial proposal â€” open circle
         ax.plot(i, prop, marker='o', color=_C_CIRCLE, markersize=11,
                 markerfacecolor='none', markeredgewidth=2.2, zorder=5, linestyle='None')
 
-        # Realistic target — filled diamond
+        # Realistic target â€” filled diamond
         ax.plot(i, target, marker='D', color=_C_DIAMOND, markersize=8,
                 markerfacecolor=_C_DIAMOND, zorder=5, linestyle='None')
 
@@ -901,7 +901,7 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
 
     ax.set_ylabel("Price ($)", fontsize=9, color=_C_LABELS)
     ax.set_title(
-        "Reverse Auction Planning — Uncertainty Projection",
+        "Reverse Auction Planning â€” Uncertainty Projection",
         fontsize=11, fontweight='bold', color=_C_TITLE, pad=12,
     )
     ax.tick_params(colors=_C_LABELS, labelsize=8)
@@ -913,11 +913,11 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
 
     leg_handles = [
         plt.Line2D([0], [0], marker='o', color=_C_CIRCLE, markerfacecolor='none',
-                   markeredgewidth=2, markersize=9, linestyle='None', label='○  Initial Proposal'),
+                   markeredgewidth=2, markersize=9, linestyle='None', label='Initial Proposal'),
         plt.Line2D([0], [0], marker='D', color=_C_DIAMOND, markerfacecolor=_C_DIAMOND,
-                   markersize=7, linestyle='None', label='◆  Realistic Target'),
+                   markersize=7, linestyle='None', label='Realistic Target'),
         mpatches.Patch(facecolor=_C_BOX, alpha=0.6, edgecolor=_C_CIRCLE,
-                       label='█  Uncertainty Range'),
+                       label='Uncertainty Range'),
     ]
     ax.legend(
         handles=leg_handles,
@@ -969,9 +969,9 @@ def _section_footer(styles: dict, lang: str = "en") -> list:
     return elements
 
 
-# ──────────────────────────────────────────────────────────────────────
-# FUNÇÃO PRINCIPAL
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# FUNÃ‡ÃƒO PRINCIPAL
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def gerar_pdf(
     inp: InputLeilao,
@@ -980,8 +980,8 @@ def gerar_pdf(
     lang: str = "en",
 ) -> bytes:
     """
-    Gera o relatório PDF completo e retorna os bytes.
-    Não salva em disco — usar com st.download_button.
+    Gera o relatÃ³rio PDF completo e retorna os bytes.
+    NÃ£o salva em disco â€” usar com st.download_button.
     """
     buffer = io.BytesIO()
 
@@ -996,7 +996,7 @@ def gerar_pdf(
         author="BidWise",
     )
 
-    page_w = A4[0] - 3.6 * cm  # largura útil
+    page_w = A4[0] - 3.6 * cm  # largura Ãºtil
     styles = _build_styles()
 
     story: list = []
@@ -1031,9 +1031,9 @@ def gerar_pdf(
     return buffer.getvalue()
 
 
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # TESTE
-# ──────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 if __name__ == "__main__":
     from motor import (
@@ -1068,3 +1068,4 @@ if __name__ == "__main__":
         f.write(pdf_bytes)
 
     print(f"PDF generated: {output_path}  ({len(pdf_bytes):,} bytes)")
+
