@@ -34,7 +34,7 @@ from simulador import simular
 
 st.set_page_config(
     page_title="BidWise",
-    page_icon="🔨",
+    page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -48,7 +48,7 @@ for _legacy_key in ("sidebar_hidden", "sidebar_collapsed", "show_about"):
 
 _lang_raw = st.sidebar.radio(
     "🌐",
-    ["EN", "PT-BR"],
+    ["PT-BR", "EN"],
     horizontal=True,
     label_visibility="collapsed",
     key="lang_selector",
@@ -79,6 +79,10 @@ html, body { overflow-x: hidden !important; }
     /* Marca — azul-petróleo BidWise */
     --bw-brand: #4A90A4;
     --bw-brand-subtitle: #3F4F5F;
+    --bw-accent: #6F8797;
+    --bw-accent-hover: #5F7686;
+    --bw-accent-soft: rgba(111, 135, 151, 0.16);
+    --bw-accent-border: rgba(111, 135, 151, 0.40);
 }
 
 /* ── Tema escuro ────────────────────────────────────────────────────── */
@@ -93,6 +97,10 @@ html, body { overflow-x: hidden !important; }
         --bw-privacy-text: #E8F2F8;
         --bw-brand: #5BAEC4;
         --bw-brand-subtitle: #A8BFCC;
+        --bw-accent: #6F91A3;
+        --bw-accent-hover: #82A5B8;
+        --bw-accent-soft: rgba(111, 145, 163, 0.22);
+        --bw-accent-border: rgba(130, 165, 184, 0.46);
     }
 }
 
@@ -108,6 +116,19 @@ html, body { overflow-x: hidden !important; }
     left: 0;
     width: 100vw;
     z-index: 1000;
+}
+
+.bw-market-bar {
+    background: var(--bw-surface-subtle);
+    color: var(--bw-text-primary);
+    border: 1px solid var(--bw-border-subtle);
+    border-radius: 10px;
+    padding: 6px 14px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 10px auto 14px auto;
+    max-width: min(980px, 100%);
 }
 
 .stAppViewContainer,
@@ -184,6 +205,33 @@ html, body { overflow-x: hidden !important; }
 
 .bw-footer a {
     color: var(--bw-text-muted);
+}
+
+button[kind="primary"] {
+    background-color: var(--bw-accent) !important;
+    border-color: var(--bw-accent) !important;
+    color: #F8FAFC !important;
+}
+
+button[kind="primary"]:hover {
+    background-color: var(--bw-accent-hover) !important;
+    border-color: var(--bw-accent-hover) !important;
+}
+
+button[kind="secondary"] {
+    border-color: var(--bw-accent-border) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="radio"] div[role="radiogroup"] label:has(input:checked),
+[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"] {
+    background-color: var(--bw-accent-soft) !important;
+    border-color: var(--bw-accent-border) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
+[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before {
+    background-color: var(--bw-accent) !important;
+    border-color: var(--bw-accent) !important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -406,6 +454,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    f'<div class="bw-market-bar">{t("market_report_bar", lang)}</div>',
+    unsafe_allow_html=True,
+)
+
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = 0
 
@@ -459,7 +512,7 @@ if _active_tab == 0:
     st.markdown(
         f"""
         <div class="bw-header">
-            <span class="bw-header__brand">🔨 BidWise</span>
+            <span class="bw-header__brand">⚖️ BidWise</span>
             &nbsp;
             <span class="bw-header__title">
                 {"Consultor de Estratégia de Leilão Reverso" if lang == "pt" else "Reverse Auction Strategy Advisor"}
@@ -479,7 +532,6 @@ if _active_tab == 0:
     with st.sidebar:
         if "last_rec" not in st.session_state:
             st.info(t("sidebar_no_analysis_tip", lang))
-        st.caption(t("mobile_tip", lang))
 
         st.markdown(f"### {t('sidebar_title', lang)}")
 
@@ -1008,7 +1060,12 @@ if _active_tab == 0:
     st.markdown(
         f"""
         <div class="bw-footer">
-            {t("footer_text", lang)} &nbsp;·&nbsp;
+            <a href="https://www.linkedin.com/in/henriquealexandresilva/" target="_blank" rel="noopener noreferrer">
+                <b>Henrique Silva</b>
+            </a>
+            &nbsp;·&nbsp;
+            {"Strategic Sourcing Analyst" if lang == "en" else "Strategic Sourcing Analyst"}
+            &nbsp;·&nbsp;
             <a href="https://github.com/HenriqueAPSilva/bidwise">
                 {t("github_link", lang)}
             </a>

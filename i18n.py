@@ -13,6 +13,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "🔒 No cookies · No tracking · No data stored · "
             "Your scenarios exist only in your active session"
         ),
+        "market_report_bar": "Also check out our monthly market report (free)",
         "tab_advisor": "Auction Advisor",
         "tab_guide": "How to Model Suppliers",
         "tab_about": "About BidWise",
@@ -212,6 +213,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "🔒 Sem cookies · Sem rastreamento · Nenhum dado armazenado · "
             "Seus cenários existem apenas na sessão ativa"
         ),
+        "market_report_bar": "Conheça também nosso relatório mensal do mercado (grátis)",
         "tab_advisor": "Consultor de Leilão",
         "tab_guide": "Como Modelar Fornecedores",
         "tab_about": "Sobre o BidWise",
