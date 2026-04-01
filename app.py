@@ -224,54 +224,6 @@ button[kind="secondary"] {
     border-color: var(--bw-accent-border) !important;
 }
 
-[data-testid="stSidebar"] [data-baseweb="radio"] label,
-[data-testid="stSidebar"] [data-baseweb="radio"] label *,
-[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"],
-[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"] * {
-    background: transparent !important;
-    background-color: transparent !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
-}
-
-[data-testid="stSidebar"] input[type="radio"] {
-    accent-color: var(--bw-accent) !important;
-}
-
-[data-testid="stSidebar"] [role="radio"],
-[data-testid="stSidebar"] [role="radiogroup"] [role="radio"] {
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-}
-
-[data-testid="stSidebar"] [role="radio"][aria-checked="true"],
-[data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] {
-    color: inherit !important;
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-[data-testid="stSidebar"] [role="radio"][aria-checked="true"] *,
-[data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] * {
-    border-color: var(--bw-accent) !important;
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
-[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
-[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before,
-[data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"],
-[data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"]::before {
-    background-color: var(--bw-accent) !important;
-    border-color: var(--bw-accent) !important;
-}
-
-[data-testid="stSidebar"] [data-baseweb="radio"] label > div:last-child {
-    background: transparent !important;
-    background-color: transparent !important;
-}
-
 .st-key-lang_selector,
 .st-key-lang_selector * {
     --st-radio-selected-bg: transparent !important;
@@ -289,12 +241,14 @@ button[kind="secondary"] {
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
+    border-color: transparent !important;
 }
 
 .st-key-lang_selector .st-bn,
-[data-testid="stSidebar"] .st-bn {
-    background-color: var(--bw-accent) !important;
-    border-color: var(--bw-accent) !important;
+.st-key-lang_selector span,
+.st-key-lang_selector label {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 button[data-testid="stNumberInputStepUp"],
