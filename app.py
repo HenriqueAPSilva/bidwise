@@ -272,6 +272,25 @@ button[kind="secondary"] {
     background-color: transparent !important;
 }
 
+.st-key-lang_selector,
+.st-key-lang_selector * {
+    --st-radio-selected-bg: transparent !important;
+}
+
+.st-key-lang_selector [data-baseweb="radio"] label,
+.st-key-lang_selector [data-baseweb="radio"] label > div,
+.st-key-lang_selector [data-baseweb="radio"] label span,
+.st-key-lang_selector [role="radio"],
+.st-key-lang_selector [role="radio"] > div,
+.st-key-lang_selector [aria-checked="true"],
+.st-key-lang_selector [aria-checked="true"] > div,
+.st-key-lang_selector [aria-checked="true"] span {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
 button[data-testid="stNumberInputStepUp"],
 button[data-testid="stNumberInputStepDown"] {
     border-color: var(--bw-accent-border) !important;
