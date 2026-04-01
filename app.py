@@ -133,6 +133,14 @@ html, body { overflow-x: hidden !important; }
     max-width: min(980px, 100%);
 }
 
+@media (prefers-color-scheme: dark) {
+    .bw-market-bar {
+        color: #E8F2F8;
+        background: rgba(91, 174, 196, 0.14);
+        border-color: rgba(91, 174, 196, 0.30);
+    }
+}
+
 .stAppViewContainer,
 [data-testid="stSidebar"] {
     padding-top: 44px;
@@ -404,11 +412,41 @@ def _fmt_brl(value: float | None) -> str:
 
 
 def _is_dark_theme() -> bool:
-    """Best-effort detection of the active Streamlit theme base."""
+    """Best-effort detection of the active Streamlit theme."""
+    def _hex_to_rgb(value: str) -> tuple[int, int, int] | None:
+        value = value.strip()
+        if not value.startswith("#"):
+            return None
+        value = value.lstrip("#")
+        if len(value) == 3:
+            value = "".join(ch * 2 for ch in value)
+        if len(value) != 6:
+            return None
+        try:
+            return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+        except ValueError:
+            return None
+
     try:
-        return str(st.get_option("theme.base")).lower() == "dark"
+        base = str(st.get_option("theme.base") or "").lower()
+        if base in {"dark", "light"}:
+            return base == "dark"
+
+        bg = st.get_option("theme.backgroundColor")
+        text = st.get_option("theme.textColor")
+        bg_rgb = _hex_to_rgb(str(bg)) if bg else None
+        text_rgb = _hex_to_rgb(str(text)) if text else None
+
+        if bg_rgb:
+            luminance = (0.2126 * bg_rgb[0] + 0.7152 * bg_rgb[1] + 0.0722 * bg_rgb[2]) / 255
+            return luminance < 0.5
+
+        if text_rgb:
+            luminance = (0.2126 * text_rgb[0] + 0.7152 * text_rgb[1] + 0.0722 * text_rgb[2]) / 255
+            return luminance > 0.7
     except Exception:
-        return False
+        pass
+    return False
 
 
 def _build_copy_prompt(inp: InputLeilao, rec, sim, lang: str = "en") -> str:
@@ -909,7 +947,8 @@ if _active_tab == 0:
         # ── Uncertainty chart ─────────────────────────────────────────
         _fig, _has_chart = draw_uncertainty_chart(
             sim.alvos_por_fornecedor,
-            dark=_is_dark_theme(),
+            dark=False,
+            lang=lang,
         )
         if _has_chart:
             import matplotlib.pyplot as plt

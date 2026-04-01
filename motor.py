@@ -1441,15 +1441,15 @@ def _gerar_justificativa(
 
     _fmt_label = {
         "Inglês Reverso — Ranking + Termômetro": (
-            "English Reverse — Ranking + Termômetro" if _is_pt
+            "Leilão Reverso Inglês — Ranking + Termômetro" if _is_pt
             else "English Reverse — Ranking + Thermometer"
         ),
         "Inglês Reverso — Apenas Ranking": (
-            "English Reverse — Apenas Ranking" if _is_pt
+            "Leilão Reverso Inglês — Apenas Ranking" if _is_pt
             else "English Reverse — Ranking Only"
         ),
-        "Holandês Reverso": "Dutch Reverse",
-        "Japonês Reverso":  "Japanese Reverse",
+        "Holandês Reverso": "Leilão Reverso Holandês" if _is_pt else "Dutch Reverse",
+        "Japonês Reverso":  "Leilão Reverso Japonês" if _is_pt else "Japanese Reverse",
         "Não fazer leilão": "Não fazer leilão" if _is_pt else "Do not auction",
     }
 

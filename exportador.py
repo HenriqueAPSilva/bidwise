@@ -36,11 +36,19 @@ from simulador import SimulacaoResult, TipoAlerta
 from i18n import t as _t
 
 _FORMAT_LABEL_EN: dict[FormatoLeilao, str] = {
-    FormatoLeilao.INGLES_COMPLETO: "English Reverse â€” Ranking + Thermometer",
-    FormatoLeilao.INGLES_REDUZIDO: "English Reverse â€” Ranking Only",
+    FormatoLeilao.INGLES_COMPLETO: "English Reverse - Ranking + Thermometer",
+    FormatoLeilao.INGLES_REDUZIDO: "English Reverse - Ranking Only",
     FormatoLeilao.HOLANDES:        "Dutch Reverse",
     FormatoLeilao.JAPONES:         "Japanese Reverse",
     FormatoLeilao.NAO_LEILAO:      "Do Not Auction",
+}
+
+_FORMAT_LABEL_PT: dict[FormatoLeilao, str] = {
+    FormatoLeilao.INGLES_COMPLETO: "Leilão Reverso Inglês - Ranking + Termômetro",
+    FormatoLeilao.INGLES_REDUZIDO: "Leilão Reverso Inglês - Apenas Ranking",
+    FormatoLeilao.HOLANDES:        "Leilão Reverso Holandês",
+    FormatoLeilao.JAPONES:         "Leilão Reverso Japonês",
+    FormatoLeilao.NAO_LEILAO:      "Não Realizar Leilão",
 }
 
 
@@ -267,13 +275,13 @@ def _sp(h: float = 0.3) -> Spacer:
 
 def _fmt_brl(value: Optional[float]) -> str:
     if value is None:
-        return "â€”"
+        return "-"
     return f"$ {value:,.2f}"
 
 
 def _fmt_pct(value: Optional[float], suffix: str = "%") -> str:
     if value is None:
-        return "â€”"
+        return "-"
     return f"{value:.1f}{suffix}"
 
 
@@ -329,13 +337,13 @@ def _section_scenario_summary(
 
     _KRALJIC_LABEL = {
         "Alavanca":    "Alavanca"    if _is_pt else "Leverage",
-        "EstratÃ©gico": "EstratÃ©gico" if _is_pt else "Strategic",
+        "Estratégico": "Estratégico" if _is_pt else "Strategic",
         "Gargalo":     "Gargalo"     if _is_pt else "Bottleneck",
-        "NÃ£o crÃ­tico": "NÃ£o crÃ­tico" if _is_pt else "Non-critical",
+        "Não crítico": "Não crítico" if _is_pt else "Non-critical",
     }
     _NIVEL_LABEL = {
         "Alto":  "Alto"  if _is_pt else "High",
-        "MÃ©dio": "MÃ©dio" if _is_pt else "Medium",
+        "Médio": "Médio" if _is_pt else "Medium",
         "Baixo": "Baixo" if _is_pt else "Low",
     }
     _BEHAV_LABEL = {
@@ -379,7 +387,7 @@ def _section_scenario_summary(
         Paragraph(_t("pdf_interest_header", lang), styles["table_header"]),
     ]]
     for forn in inp.fornecedores:
-        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "â€”"
+        proposta = f"$ {forn.proposta_brl:,.2f}" if forn.proposta_brl is not None else "-"
         sup_rows.append([
             Paragraph(forn.nome, styles["table_cell_bold"]),
             Paragraph(proposta, styles["table_cell"]),
@@ -416,7 +424,8 @@ def _section_recommendation_card(
     )
 
     # Colored card header
-    format_p = Paragraph(_FORMAT_LABEL_EN.get(rec.formato, rec.formato.value), styles["format_label"])
+    format_labels = _FORMAT_LABEL_PT if lang == "pt" else _FORMAT_LABEL_EN
+    format_p = Paragraph(format_labels.get(rec.formato, rec.formato.value), styles["format_label"])
     card_header = Table(
         [[format_p]],
         colWidths=[page_w],
@@ -472,8 +481,8 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
     def row(label: str, pct: Optional[str], brl: Optional[str]) -> list:
         return [
             Paragraph(label, styles["table_cell_bold"]),
-            Paragraph(pct or "â€”", styles["table_cell"]),
-            Paragraph(brl or "â€”", styles["table_cell"]),
+            Paragraph(pct or "-", styles["table_cell"]),
+            Paragraph(brl or "-", styles["table_cell"]),
         ]
 
     rows.append(row(
@@ -489,21 +498,21 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
     rows.append(row(
         _t("duration_param", lang),
         f"{p.duracao_minutos} min",
-        "â€”",
+        "-",
     ))
 
     if p.prorrogacao_minutos:
         rows.append(row(
             _t("auto_ext_param", lang).format(trigger=p.prorrogacao_trigger_minutos),
             f"+{p.prorrogacao_minutos} min",
-            "â€”",
+            "-",
         ))
 
     if p.visibilidade:
         rows.append([
             Paragraph(_t("thermometer_param", lang), styles["table_cell_bold"]),
             Paragraph(p.visibilidade, styles["table_cell"]),
-            Paragraph("â€”", styles["table_cell"]),
+            Paragraph("-", styles["table_cell"]),
         ])
 
     if p.rodadas_estimadas:
@@ -511,7 +520,7 @@ def _section_parameters(styles: dict, rec: Recomendacao, page_w: float, lang: st
         rows.append(row(
             _rounds_label,
             f"~{p.rodadas_estimadas}",
-            "â€”",
+            "-",
         ))
 
     if p.incremento_holandes_pct:
@@ -649,7 +658,7 @@ def _section_simulation(
     contagem: dict[str, int] = {}
     for f in sim.fornecedores:
         contagem[f.arquetipo.value] = contagem.get(f.arquetipo.value, 0) + 1
-    dist_str = "  |  ".join(f"{v}Ã— {k}" for k, v in contagem.items())
+    dist_str = "  |  ".join(f"{v}x {k}" for k, v in contagem.items())
     elements.append(Paragraph(_t("pdf_supplier_field", lang).format(dist=dist_str), styles["body"]))
     elements.append(_sp(0.15))
 
@@ -819,7 +828,7 @@ def _section_suppliers(styles: dict, inp: InputLeilao, page_w: float) -> list:
     return elements
 
 
-def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
+def draw_uncertainty_chart(alvos: list[dict], dark: bool = True, lang: str = "en"):
     """
     Generates the per-supplier uncertainty projection chart.
     Returns (fig, has_data). has_data=False when no supplier has a proposal value.
@@ -844,17 +853,18 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     _C_CIRCLE  = "#5DADE2"
     _C_DIAMOND = "#2ECC71"
     _C_BOX     = "#5DADE2"
-    _C_ANNOT   = "#E5E7EB" if dark else "#333333"
-    _C_TITLE   = "#F8FAFC" if dark else "#333333"
-    _C_LABELS  = "#E2E8F0" if dark else "#333333"
-    _C_GRID    = "#4A4A6A" if dark else "#F3F4F6"
-    _C_SPINE   = "#64748B" if dark else "#E5E7EB"
-    _C_LEG     = "#E2E8F0" if dark else "#333333"
+    _C_ANNOT   = "#334155"
+    _C_TITLE   = "#1F2937"
+    _C_LABELS  = "#374151"
+    _C_GRID    = "#E5E7EB"
+    _C_SPINE   = "#CBD5E1"
+    _C_LEG     = "#334155"
 
     n = len(with_data)
     fig, ax = plt.subplots(figsize=(max(7, n * 1.6), 5))
-    fig.patch.set_alpha(0)
-    ax.set_facecolor("none")
+    fig.patch.set_facecolor("white")
+    fig.patch.set_alpha(1)
+    ax.set_facecolor("white")
 
     for i, a in enumerate(with_data):
         prop        = a["proposta_inicial"]
@@ -910,9 +920,11 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
     ax.set_ylim(min_price * 0.93, max(all_props) * 1.10)
     ax.set_xlim(-0.6, n - 0.4)
 
-    ax.set_ylabel("Price ($)", fontsize=9, color=_C_LABELS)
+    ax.set_ylabel("Preço ($)" if lang == "pt" else "Price ($)", fontsize=9, color=_C_LABELS)
     ax.set_title(
-        "Reverse Auction Planning â€” Uncertainty Projection",
+        "Planejamento do Leilão Reverso - Projeção de Incerteza"
+        if lang == "pt" else
+        "Reverse Auction Planning - Uncertainty Projection",
         fontsize=11, fontweight='bold', color=_C_TITLE, pad=12,
     )
     ax.tick_params(colors=_C_LABELS, labelsize=8)
@@ -924,11 +936,13 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
 
     leg_handles = [
         plt.Line2D([0], [0], marker='o', color=_C_CIRCLE, markerfacecolor='none',
-                   markeredgewidth=2, markersize=9, linestyle='None', label='Initial Proposal'),
+                   markeredgewidth=2, markersize=9, linestyle='None',
+                   label='Proposta Inicial' if lang == "pt" else 'Initial Proposal'),
         plt.Line2D([0], [0], marker='D', color=_C_DIAMOND, markerfacecolor=_C_DIAMOND,
-                   markersize=7, linestyle='None', label='Realistic Target'),
+                   markersize=7, linestyle='None',
+                   label='Alvo Realista' if lang == "pt" else 'Realistic Target'),
         mpatches.Patch(facecolor=_C_BOX, alpha=0.6, edgecolor=_C_CIRCLE,
-                       label='Uncertainty Range'),
+                       label='Faixa de Incerteza' if lang == "pt" else 'Uncertainty Range'),
     ]
     ax.legend(
         handles=leg_handles,
@@ -936,7 +950,7 @@ def draw_uncertainty_chart(alvos: list[dict], dark: bool = True):
         ncol=3, fontsize=8.5, framealpha=0.5, labelcolor=_C_LEG,
     )
     fig.text(0.98, 0.02, "BidWise", ha='right', va='bottom',
-             fontsize=7, color='#CBD5E1' if dark else '#9CA3AF', style='italic')
+             fontsize=7, color='#9CA3AF', style='italic')
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.22 if not rotate else 0.30)
@@ -952,7 +966,7 @@ def _section_uncertainty_chart(
     elements = []
     elements.append(Paragraph(_t("pdf_section_chart", lang), styles["section_title"]))
 
-    fig, has_data = draw_uncertainty_chart(sim.alvos_por_fornecedor, dark=False)
+    fig, has_data = draw_uncertainty_chart(sim.alvos_por_fornecedor, dark=False, lang=lang)
     if not has_data:
         elements.append(Paragraph(_t("pdf_no_chart", lang), styles["body"]))
         return elements
