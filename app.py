@@ -60,6 +60,7 @@ html, body { overflow-x: hidden !important; }
 
 /* ── BidWise Design Tokens — MarketWise family, azul-petróleo ──────── */
 :root {
+    --primary-color: #6F8797;
     /* Texto */
     --bw-text-primary: var(--text-color, #1C2D3A);
     --bw-text-secondary: #3F4F5F;
@@ -88,6 +89,7 @@ html, body { overflow-x: hidden !important; }
 /* ── Tema escuro ────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
     :root {
+        --primary-color: #6F91A3;
         --bw-text-secondary: #A8BFCC;
         --bw-text-muted: #6B8A9A;
         --bw-surface-subtle: rgba(91, 174, 196, 0.10);
@@ -233,12 +235,50 @@ button[kind="secondary"] {
     accent-color: var(--bw-accent) !important;
 }
 
+[data-testid="stSidebar"] [role="radio"][aria-checked="true"],
+[data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] {
+    color: var(--bw-accent) !important;
+}
+
+[data-testid="stSidebar"] [role="radio"][aria-checked="true"] *,
+[data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] * {
+    border-color: var(--bw-accent) !important;
+}
+
 [data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
 [data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before,
 [data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"],
 [data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"]::before {
     background-color: var(--bw-accent) !important;
     border-color: var(--bw-accent) !important;
+}
+
+button[data-testid="stNumberInputStepUp"],
+button[data-testid="stNumberInputStepDown"] {
+    border-color: var(--bw-accent-border) !important;
+}
+
+button[data-testid="stNumberInputStepUp"]:hover,
+button[data-testid="stNumberInputStepDown"]:hover,
+button[data-testid="stNumberInputStepUp"]:focus,
+button[data-testid="stNumberInputStepDown"]:focus {
+    background-color: var(--bw-accent-soft) !important;
+    border-color: var(--bw-accent) !important;
+    color: var(--bw-accent) !important;
+}
+
+[data-baseweb="input"]:focus-within,
+[data-baseweb="base-input"]:focus-within,
+[data-baseweb="select"]:focus-within,
+[data-testid="stTextInput"] [data-baseweb="input"]:focus-within,
+[data-testid="stNumberInput"] [data-baseweb="input"]:focus-within,
+[data-testid="stSelectbox"] [data-baseweb="select"]:focus-within,
+textarea:focus,
+input:focus,
+select:focus {
+    border-color: var(--bw-accent) !important;
+    box-shadow: 0 0 0 1px var(--bw-accent) !important;
+    outline: none !important;
 }
 </style>""", unsafe_allow_html=True)
 

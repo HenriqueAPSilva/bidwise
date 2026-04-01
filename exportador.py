@@ -681,36 +681,47 @@ def _section_alerts(styles: dict, sim: SimulacaoResult, page_w: float, lang: str
 
     elements.append(Paragraph(_t("pdf_section_alerts", lang), styles["section_title"]))
 
+    def _severity_key(value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized in {"alta", "high"}:
+            return "high"
+        if normalized in {"média", "media", "mã©dia", "medium"}:
+            return "medium"
+        if normalized in {"baixa", "low"}:
+            return "low"
+        return "medium"
+
     sev_style = {
-        "Alta":  ("alert_high", "[HIGH]  "),
-        "MÃ©dia": ("alert_mid",  "[MED]   "),
-        "Baixa": ("alert_low",  "[LOW]   "),
+        "high": ("alert_high", "[HIGH]  "),
+        "medium": ("alert_mid",  "[MED]   "),
+        "low": ("alert_low",  "[LOW]   "),
     }
     sev_bg = {
-        "Alta":  RED_BG,
-        "MÃ©dia": AMBER_BG,
-        "Baixa": colors.HexColor("#F0FDF4"),
+        "high": RED_BG,
+        "medium": AMBER_BG,
+        "low": colors.HexColor("#F0FDF4"),
     }
     sev_border = {
-        "Alta":  RED,
-        "MÃ©dia": AMBER,
-        "Baixa": GREEN,
+        "high": RED,
+        "medium": AMBER,
+        "low": GREEN,
     }
 
-    for alerta in sorted(sim.alertas, key=lambda a: {"Alta": 0, "MÃ©dia": 1, "Baixa": 2}[a.severidade]):
-        style_key, prefix = sev_style.get(alerta.severidade, ("body", ""))
+    for alerta in sorted(sim.alertas, key=lambda a: {"high": 0, "medium": 1, "low": 2}[_severity_key(a.severidade)]):
+        sev = _severity_key(alerta.severidade)
+        style_key, prefix = sev_style.get(sev, ("body", ""))
         text = f"<b>{alerta.tipo.value}</b> â€” {alerta.descricao}"
         alert_cell = Table(
             [[Paragraph(text, styles[style_key])]],
             colWidths=[page_w - 4],
         )
         alert_cell.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), sev_bg[alerta.severidade]),
+            ("BACKGROUND", (0, 0), (-1, -1), sev_bg[sev]),
             ("LEFTPADDING", (0, 0), (-1, -1), 10),
             ("RIGHTPADDING", (0, 0), (-1, -1), 8),
             ("TOPPADDING", (0, 0), (-1, -1), 6),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LINEAFTER", (0, 0), (0, -1), 3, sev_border[alerta.severidade]),
+            ("LINEAFTER", (0, 0), (0, -1), 3, sev_border[sev]),
         ]))
         elements.append(alert_cell)
         elements.append(_sp(0.1))
