@@ -247,7 +247,7 @@ button[kind="secondary"] {
 
 [data-testid="stSidebar"] [role="radio"][aria-checked="true"],
 [data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] {
-    color: var(--bw-accent) !important;
+    color: inherit !important;
     background: transparent !important;
     background-color: transparent !important;
 }
@@ -289,6 +289,12 @@ button[kind="secondary"] {
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
+}
+
+.st-key-lang_selector .st-bn,
+[data-testid="stSidebar"] .st-bn {
+    background-color: var(--bw-accent) !important;
+    border-color: var(--bw-accent) !important;
 }
 
 button[data-testid="stNumberInputStepUp"],
