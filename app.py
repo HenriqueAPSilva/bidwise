@@ -224,9 +224,12 @@ button[kind="secondary"] {
     border-color: var(--bw-accent-border) !important;
 }
 
-[data-testid="stSidebar"] [data-baseweb="radio"] div[role="radiogroup"] label,
-[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"] {
+[data-testid="stSidebar"] [data-baseweb="radio"] label,
+[data-testid="stSidebar"] [data-baseweb="radio"] label *,
+[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"],
+[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"] * {
     background: transparent !important;
+    background-color: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
 }
@@ -235,14 +238,25 @@ button[kind="secondary"] {
     accent-color: var(--bw-accent) !important;
 }
 
+[data-testid="stSidebar"] [role="radio"],
+[data-testid="stSidebar"] [role="radiogroup"] [role="radio"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
 [data-testid="stSidebar"] [role="radio"][aria-checked="true"],
 [data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] {
     color: var(--bw-accent) !important;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 [data-testid="stSidebar"] [role="radio"][aria-checked="true"] *,
 [data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] * {
     border-color: var(--bw-accent) !important;
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 [data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
@@ -251,6 +265,11 @@ button[kind="secondary"] {
 [data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"]::before {
     background-color: var(--bw-accent) !important;
     border-color: var(--bw-accent) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="radio"] label > div:last-child {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 button[data-testid="stNumberInputStepUp"],
@@ -270,9 +289,19 @@ button[data-testid="stNumberInputStepDown"]:focus {
 [data-baseweb="input"]:focus-within,
 [data-baseweb="base-input"]:focus-within,
 [data-baseweb="select"]:focus-within,
+[data-baseweb="select"] > div:focus-within,
+[data-baseweb="select"] > div[data-focus="true"],
+[data-baseweb="base-input"] > div:focus-within,
+[data-baseweb="base-input"] > div[data-focus="true"],
 [data-testid="stTextInput"] [data-baseweb="input"]:focus-within,
+[data-testid="stTextInput"] [data-baseweb="base-input"]:focus-within,
 [data-testid="stNumberInput"] [data-baseweb="input"]:focus-within,
+[data-testid="stNumberInput"] [data-baseweb="base-input"]:focus-within,
+[data-testid="stNumberInput"] input:focus-visible,
+[data-testid="stNumberInput"] input:focus,
 [data-testid="stSelectbox"] [data-baseweb="select"]:focus-within,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div[data-focus="true"],
 textarea:focus,
 input:focus,
 select:focus {
