@@ -244,11 +244,15 @@ button[kind="secondary"] {
     border-color: transparent !important;
 }
 
-.st-key-lang_selector .st-bn,
 .st-key-lang_selector span,
 .st-key-lang_selector label {
     background: transparent !important;
     background-color: transparent !important;
+}
+
+.st-key-lang_selector .st-bn {
+    background-color: var(--bw-accent) !important;
+    border-color: var(--bw-accent) !important;
 }
 
 button[data-testid="stNumberInputStepUp"],
