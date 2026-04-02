@@ -69,6 +69,7 @@ html, body { overflow-x: hidden !important; }
     /* Superfícies */
     --bw-surface-subtle: rgba(74, 144, 164, 0.08);
     --bw-surface-card: rgba(74, 144, 164, 0.05);
+    --bw-sidebar-bg: #F3F6FA;
 
     /* Bordas */
     --bw-border-subtle: rgba(196, 213, 223, 0.90);
@@ -94,6 +95,7 @@ html, body { overflow-x: hidden !important; }
         --bw-text-muted: #6B8A9A;
         --bw-surface-subtle: rgba(91, 174, 196, 0.10);
         --bw-surface-card: rgba(91, 174, 196, 0.05);
+        --bw-sidebar-bg: #262730;
         --bw-border-subtle: rgba(91, 174, 196, 0.22);
         --bw-privacy-bg: #0E1A24;
         --bw-privacy-text: #E8F2F8;
@@ -294,8 +296,8 @@ button[kind="secondary"] {
 .st-key-lang_selector [data-baseweb="radio"] label > div:last-child *,
 .st-key-lang_selector [role="radio"] > div:last-child,
 .st-key-lang_selector [role="radio"] > div:last-child * {
-    background: transparent !important;
-    background-color: transparent !important;
+    background: var(--bw-sidebar-bg) !important;
+    background-color: var(--bw-sidebar-bg) !important;
     background-image: none !important;
     box-shadow: none !important;
 }
