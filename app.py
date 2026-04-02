@@ -285,22 +285,19 @@ button[kind="secondary"] {
     --st-radio-selected-bg: transparent !important;
 }
 
-.st-key-lang_selector [data-baseweb="radio"] label,
-.st-key-lang_selector [data-baseweb="radio"] label *,
-.st-key-lang_selector [role="radio"],
-.st-key-lang_selector [role="radio"] *,
-.st-key-lang_selector [aria-checked="true"],
-.st-key-lang_selector [aria-checked="true"] * {
+.st-key-lang_selector .st-bn {
+    background-color: var(--bw-accent) !important;
+    border-color: var(--bw-accent) !important;
+}
+
+.st-key-lang_selector [data-baseweb="radio"] label > div:last-child,
+.st-key-lang_selector [data-baseweb="radio"] label > div:last-child *,
+.st-key-lang_selector [role="radio"] > div:last-child,
+.st-key-lang_selector [role="radio"] > div:last-child * {
     background: transparent !important;
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
-}
-
-.st-key-lang_selector .st-bn {
-    background: transparent !important;
-    background-color: transparent !important;
-    border-color: var(--bw-accent) !important;
 }
 
 button[data-testid="stNumberInputStepUp"],
