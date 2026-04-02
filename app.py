@@ -309,6 +309,16 @@ button[kind="secondary"] {
     box-shadow: none !important;
 }
 
+.st-key-lang_selector [data-baseweb="radio"] input:checked + div + div,
+.st-key-lang_selector [data-baseweb="radio"] input:checked + div + div *,
+.st-key-lang_selector [data-baseweb="radio"] input + div + div,
+.st-key-lang_selector [data-baseweb="radio"] input + div + div * {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
 button[data-testid="stNumberInputStepUp"],
 button[data-testid="stNumberInputStepDown"] {
     border-color: var(--bw-accent-border) !important;
@@ -345,6 +355,50 @@ select:focus {
     border-color: var(--bw-accent) !important;
     box-shadow: 0 0 0 1px var(--bw-accent) !important;
     outline: none !important;
+}
+
+/* Streamlit/BaseWeb fallback states that still used the default accent */
+a,
+a:visited,
+[data-testid="stTooltipIcon"] button,
+[data-testid="stTooltipIcon"] svg,
+[data-testid="stExpander"] summary:hover,
+[data-testid="stExpander"] summary:focus-visible,
+[data-testid="stExpander"] [data-testid="stIconMaterial"],
+[data-testid="stMetricDelta"] {
+    color: var(--bw-accent) !important;
+}
+
+[data-testid="stTooltipIcon"] button:hover,
+[data-testid="stTooltipIcon"] button:focus-visible {
+    color: var(--bw-accent-hover) !important;
+    border-color: var(--bw-accent-border) !important;
+    box-shadow: 0 0 0 1px var(--bw-accent-soft) !important;
+}
+
+[data-testid="stAlert"] [data-baseweb="notification"],
+[data-testid="stInfo"] [data-baseweb="notification"] {
+    border-color: var(--bw-accent-border) !important;
+    background: var(--bw-accent-soft) !important;
+}
+
+[data-testid="stAlert"] [data-testid="stAlertContentInfo"],
+[data-testid="stInfo"] [data-testid="stAlertContentInfo"],
+[data-testid="stAlert"] [data-testid="stAlertDynamicIcon"],
+[data-testid="stInfo"] [data-testid="stAlertDynamicIcon"] {
+    color: var(--bw-accent) !important;
+}
+
+[data-baseweb="select"] *[aria-selected="true"],
+[role="listbox"] [aria-selected="true"] {
+    background-color: var(--bw-accent-soft) !important;
+    color: var(--bw-text-primary) !important;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+summary:focus-visible {
+    box-shadow: 0 0 0 2px var(--bw-accent-soft) !important;
 }
 </style>""", unsafe_allow_html=True)
 
