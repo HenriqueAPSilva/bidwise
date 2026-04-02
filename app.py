@@ -269,8 +269,8 @@ button[kind="secondary"] {
     background-color: transparent !important;
 }
 
-[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
-[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before,
+[data-testid="stSidebar"] [data-baseweb="radio"] label > div:first-child,
+[data-testid="stSidebar"] [data-baseweb="radio"] label > div:first-child > div,
 [data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"],
 [data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"]::before {
     background-color: var(--bw-accent) !important;
