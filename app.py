@@ -299,6 +299,16 @@ button[kind="secondary"] {
     box-shadow: none !important;
 }
 
+.st-key-lang_selector [data-baseweb="radio"] label > *:not(:first-child),
+.st-key-lang_selector [data-baseweb="radio"] label > *:not(:first-child) *,
+.st-key-lang_selector [role="radio"] > *:not(:first-child),
+.st-key-lang_selector [role="radio"] > *:not(:first-child) * {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
 button[data-testid="stNumberInputStepUp"],
 button[data-testid="stNumberInputStepDown"] {
     border-color: var(--bw-accent-border) !important;
