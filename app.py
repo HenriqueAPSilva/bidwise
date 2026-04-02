@@ -121,9 +121,9 @@ html, body { overflow-x: hidden !important; }
 }
 
 .bw-market-bar {
-    background: var(--bw-surface-subtle);
-    color: var(--bw-text-primary);
-    border: 1px solid var(--bw-border-subtle);
+    background: #E8EFF6;
+    color: #24425A;
+    border: 1px solid #C7D6E2;
     border-radius: 10px;
     padding: 6px 14px;
     text-align: center;
