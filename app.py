@@ -296,8 +296,8 @@ button[kind="secondary"] {
 .st-key-lang_selector [data-baseweb="radio"] label > div:last-child *,
 .st-key-lang_selector [role="radio"] > div:last-child,
 .st-key-lang_selector [role="radio"] > div:last-child * {
-    background: var(--bw-sidebar-bg) !important;
-    background-color: var(--bw-sidebar-bg) !important;
+    background: transparent !important;
+    background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
 }
