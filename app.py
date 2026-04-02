@@ -135,9 +135,9 @@ html, body { overflow-x: hidden !important; }
 
 @media (prefers-color-scheme: dark) {
     .bw-market-bar {
-        color: #E8F2F8;
-        background: rgba(91, 174, 196, 0.14);
-        border-color: rgba(91, 174, 196, 0.30);
+        color: #EAF4FA;
+        background: #183243;
+        border-color: #2A566B;
     }
 }
 
@@ -232,34 +232,74 @@ button[kind="secondary"] {
     border-color: var(--bw-accent-border) !important;
 }
 
+[data-testid="stSidebar"] [data-baseweb="radio"] label,
+[data-testid="stSidebar"] [data-baseweb="radio"] label *,
+[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"],
+[data-testid="stSidebar"] [data-baseweb="radio"] label[data-checked="true"] * {
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stSidebar"] input[type="radio"] {
+    accent-color: var(--bw-accent) !important;
+}
+
+[data-testid="stSidebar"] [role="radio"],
+[data-testid="stSidebar"] [role="radiogroup"] [role="radio"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stSidebar"] [role="radio"][aria-checked="true"],
+[data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] {
+    color: inherit !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+[data-testid="stSidebar"] [role="radio"][aria-checked="true"] *,
+[data-testid="stSidebar"] [role="radiogroup"] [aria-checked="true"] * {
+    border-color: var(--bw-accent) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div,
+[data-testid="stSidebar"] [data-baseweb="radio"] input:checked + div::before,
+[data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"],
+[data-testid="stSidebar"] [data-baseweb="radio"] div[aria-checked="true"]::before {
+    background-color: var(--bw-accent) !important;
+    border-color: var(--bw-accent) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="radio"] label > div:last-child {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
 .st-key-lang_selector,
 .st-key-lang_selector * {
     --st-radio-selected-bg: transparent !important;
 }
 
 .st-key-lang_selector [data-baseweb="radio"] label,
-.st-key-lang_selector [data-baseweb="radio"] label > div,
-.st-key-lang_selector [data-baseweb="radio"] label span,
+.st-key-lang_selector [data-baseweb="radio"] label *,
 .st-key-lang_selector [role="radio"],
-.st-key-lang_selector [role="radio"] > div,
+.st-key-lang_selector [role="radio"] *,
 .st-key-lang_selector [aria-checked="true"],
-.st-key-lang_selector [aria-checked="true"] > div,
-.st-key-lang_selector [aria-checked="true"] span {
+.st-key-lang_selector [aria-checked="true"] * {
     background: transparent !important;
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
-    border-color: transparent !important;
-}
-
-.st-key-lang_selector span,
-.st-key-lang_selector label {
-    background: transparent !important;
-    background-color: transparent !important;
 }
 
 .st-key-lang_selector .st-bn {
-    background-color: var(--bw-accent) !important;
+    background: transparent !important;
+    background-color: transparent !important;
     border-color: var(--bw-accent) !important;
 }
 
