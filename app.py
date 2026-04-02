@@ -287,11 +287,6 @@ button[kind="secondary"] {
     --st-radio-selected-bg: transparent !important;
 }
 
-.st-key-lang_selector .st-bo {
-    background-color: var(--bw-accent) !important;
-    border-color: var(--bw-accent) !important;
-}
-
 .st-key-lang_selector [data-baseweb="radio"] label > div:last-child,
 .st-key-lang_selector [data-baseweb="radio"] label > div:last-child span,
 .st-key-lang_selector [data-baseweb="radio"] label > div:last-child,
