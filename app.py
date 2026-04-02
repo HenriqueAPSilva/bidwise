@@ -319,6 +319,22 @@ button[kind="secondary"] {
     box-shadow: none !important;
 }
 
+.st-key-lang_selector [data-baseweb="radio"] [data-testid="stMarkdownContainer"],
+.st-key-lang_selector [data-baseweb="radio"] [data-testid="stMarkdownContainer"] *,
+.st-key-lang_selector [data-baseweb="radio"] p,
+.st-key-lang_selector [data-baseweb="radio"] span,
+.st-key-lang_selector [data-baseweb="radio"] div {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+.st-key-lang_selector [data-baseweb="radio"] label {
+    padding: 0 !important;
+    gap: 0.35rem !important;
+}
+
 button[data-testid="stNumberInputStepUp"],
 button[data-testid="stNumberInputStepDown"] {
     border-color: var(--bw-accent-border) !important;
