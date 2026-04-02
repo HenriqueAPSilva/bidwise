@@ -319,11 +319,11 @@ button[kind="secondary"] {
     box-shadow: none !important;
 }
 
+.st-key-lang_selector [data-baseweb="radio"] label > div:last-child,
+.st-key-lang_selector [data-baseweb="radio"] label > div:last-child *,
 .st-key-lang_selector [data-baseweb="radio"] [data-testid="stMarkdownContainer"],
 .st-key-lang_selector [data-baseweb="radio"] [data-testid="stMarkdownContainer"] *,
-.st-key-lang_selector [data-baseweb="radio"] p,
-.st-key-lang_selector [data-baseweb="radio"] span,
-.st-key-lang_selector [data-baseweb="radio"] div {
+.st-key-lang_selector [data-baseweb="radio"] label > div:last-child p {
     background: transparent !important;
     background-color: transparent !important;
     background-image: none !important;
