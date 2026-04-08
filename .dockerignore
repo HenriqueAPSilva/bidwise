@@ -1,0 +1,14 @@
+.git
+.github
+.devcontainer
+.streamlit
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pdf
+*.log
+*.tmp
+*.env
+.env
+.DS_Store
