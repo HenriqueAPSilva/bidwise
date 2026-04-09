@@ -20,43 +20,43 @@ O BidWise usa dois inputs por fornecedor — **Comportamento** e **Interesse Est
 **🏢 O Incumbente**
 O fornecedor que atualmente possui o contrato. Custos de troca (switching costs) jogam a favor dele — o comprador prefere mantê-lo se o preço estiver próximo. Ele raramente precisa ser agressivo.
 
-→ Modele como: **Comportamento Moderado + Interesse Médio** (quer manter mas não vai lutar muito)
-→ Se for um incumbente acomodado: **Conservador + Baixo**
+→ **Interesse Médio + Comportamento Moderado** (quer manter mas não vai lutar muito)
+→ Se for um incumbente acomodado: **Interesse Baixo + Comportamento Conservador**
 
 **📉 O "Já Veio Barato"**
 Entrou com preço agressivo na RFQ/rodada de equalização, mas não tem mais espaço pra descer. O preço equalizado dele JÁ É o piso.
 
-→ Modele como: **Conservador + Alto** (quer o contrato mas não consegue mover mais)
+→ **Interesse Alto + Comportamento Conservador** (quer o contrato mas não consegue mover mais)
 
 **🌎 O Agressor Regional**
 Empresa local com vantagem logística, com fome de market share. Vai cortar preço pra ganhar.
 
-→ Modele como: **Competitivo + Alto**
+→ **Interesse Alto + Comportamento Competitivo**
 
 **🏛️ A Multinacional**
 Grande multinacional com política de preços global. Equipe local tem autoridade limitada para desviar das tabelas aprovadas pela matriz.
 
-→ Modele como: **Conservador + Médio**
+→ **Interesse Médio + Comportamento Conservador**
 
 **🆕 O Novo Entrante**
 Fornecedor tentando entrar no seu mercado. Aceita margens menores para estabelecer um caso de referência ou construir relacionamento.
 
-→ Modele como: **Competitivo + Alto**
+→ **Interesse Alto + Comportamento Competitivo**
 
 **😐 O Participante Relutante**
 Foi convidado mas não quer realmente o contrato. Participa para manter o relacionamento ou por obrigação.
 
-→ Modele como: **Conservador + Baixo** (BidWise vai classificar como Dropout Candidate)
+→ **Interesse Baixo + Comportamento Conservador** (BidWise vai classificar como Dropout Candidate)
 
 **🏭 O Fornecedor com Capacidade Ociosa**
 Tem excesso de capacidade produtiva e precisa de volume para diluir custo fixo. Altamente motivado a ganhar a quase qualquer preço.
 
-→ Modele como: **Competitivo + Alto**
+→ **Interesse Alto + Comportamento Competitivo**
 
 **💎 O Fornecedor Premium**
 Vende qualidade e serviço, não preço. Não vai competir num leilão puramente de preço. Sua proposta de valor é suporte pós-venda, confiabilidade ou superioridade técnica.
 
-→ Modele como: **Conservador + Baixo**
+→ **Interesse Baixo + Comportamento Conservador**
 
 ### Dicas
 

@@ -20,43 +20,43 @@ BidWise uses two inputs per supplier — **Behavior** and **Strategic Interest**
 **🏢 The Incumbent**
 The supplier who currently holds the contract. Switching costs work in their favor — the buyer prefers to keep them if the price is close enough. They rarely need to bid aggressively.
 
-→ Model as: **Moderate + Medium** (wants to keep but won't fight hard)
-→ If complacent incumbent: **Conservative + Low**
+→ **Interest Medium + Behavior Moderate** (wants to keep but won't fight hard)
+→ If complacent incumbent: **Interest Low + Behavior Conservative**
 
 **📉 The "Already Cheap" Supplier**
 Came in with an aggressive price in the RFQ/equalization round, but has no more room to go down. Their equalized price IS their floor.
 
-→ Model as: **Conservative + High** (wants the contract but can't move further)
+→ **Interest High + Behavior Conservative** (wants the contract but can't move further)
 
 **🌎 The Regional Aggressor**
 Local company with logistics advantage, hungry for market share. Will undercut to win.
 
-→ Model as: **Competitive + High**
+→ **Interest High + Behavior Competitive**
 
 **🏛️ The Global Corporation**
 Large multinational with global pricing policies. Local team has limited authority to deviate from headquarters-approved price lists.
 
-→ Model as: **Conservative + Medium**
+→ **Interest Medium + Behavior Conservative**
 
 **🆕 The New Entrant**
 Supplier trying to break into your market. Willing to accept lower margins to establish a reference case or relationship.
 
-→ Model as: **Competitive + High**
+→ **Interest High + Behavior Competitive**
 
 **😐 The Reluctant Participant**
 Was invited but doesn't really want the contract. Participating to maintain the relationship or because they were obligated.
 
-→ Model as: **Conservative + Low** (BidWise will classify as Dropout Candidate)
+→ **Interest Low + Behavior Conservative** (BidWise will classify as Dropout Candidate)
 
 **🏭 The Supplier with Idle Capacity**
 Has excess production capacity and needs volume to dilute fixed costs. Highly motivated to win at almost any price.
 
-→ Model as: **Competitive + High**
+→ **Interest High + Behavior Competitive**
 
 **💎 The Premium Supplier**
 Sells quality and service, not price. Won't compete in a price-only auction. Their value proposition is post-sale support, reliability, or technical superiority.
 
-→ Model as: **Conservative + Low**
+→ **Interest Low + Behavior Conservative**
 
 ### Tips
 
